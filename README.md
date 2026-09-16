@@ -8,7 +8,7 @@
 [![Gemini AI](https://img.shields.io/badge/Google_Gemini-Vision_API-8E75B2?logo=google&logoColor=white)](https://ai.google.dev/)
 [![PWA](https://img.shields.io/badge/PWA-Ready-5A0FC8?logo=pwa&logoColor=white)](https://web.dev/progressive-web-apps/)
 
-**Reco** is a private, offline-first web application designed to scan, digitize, search, and track wholesale receipts (including Costco warehouse paper receipts, e-invoices, and refund slips). It extracts structured item numbers, quantities, unit prices, discounts, and warehouse locations using Google Gemini Vision, while keeping your personal financial data securely indexed on your device.
+**Reco** is an application designed to scan, digitize, search, and track wholesale receipts (including Costco warehouse paper receipts, e-invoices, and refund slips). It extracts structured item numbers, quantities, unit prices, discounts, and warehouse locations using Google Gemini Vision, while keeping your personal financial data securely indexed on your device.
 
 ---
 
