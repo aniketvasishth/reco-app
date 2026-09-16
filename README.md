@@ -1,5 +1,5 @@
 # Reco 🧾
-### Wholesale Receipt Search & Instant On-Device Inventory Indexer
+### Costco Wholesale Receipt Search & Instant On-Device Inventory Indexer
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![React](https://img.shields.io/badge/React-19.0-61DAFB?logo=react&logoColor=black)](https://react.dev/)
