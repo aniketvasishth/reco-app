@@ -1,0 +1,243 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  color-scheme: light;
+  /* Material 3 Light Theme Color Roles (as per Android Material 3 Guidelines) */
+  --md-sys-color-primary: #006399;
+  --md-sys-color-on-primary: #ffffff;
+  --md-sys-color-primary-container: #cfe5ff;
+  --md-sys-color-on-primary-container: #001d32;
+
+  --md-sys-color-secondary: #51606f;
+  --md-sys-color-on-secondary: #ffffff;
+  --md-sys-color-secondary-container: #d5e4f6;
+  --md-sys-color-on-secondary-container: #0e1d2a;
+
+  --md-sys-color-tertiary: #9c4146;
+  --md-sys-color-on-tertiary: #ffffff;
+  --md-sys-color-tertiary-container: #ffd8d9;
+  --md-sys-color-on-tertiary-container: #40000a;
+
+  --md-sys-color-error: #ba1a1a;
+  --md-sys-color-on-error: #ffffff;
+  --md-sys-color-error-container: #ffdad6;
+  --md-sys-color-on-error-container: #410002;
+
+  --md-sys-color-background: #f7f9ff;
+  --md-sys-color-on-background: #181c20;
+
+  --md-sys-color-surface: #f7f9ff;
+  --md-sys-color-on-surface: #181c20;
+  --md-sys-color-surface-variant: #dde3ea;
+  --md-sys-color-on-surface-variant: #41474d;
+
+  --md-sys-color-surface-container-lowest: #ffffff;
+  --md-sys-color-surface-container-low: #f1f4fa;
+  --md-sys-color-surface-container: #ebedf4;
+  --md-sys-color-surface-container-high: #e5e8ee;
+  --md-sys-color-surface-container-highest: #dfe2e8;
+
+  --md-sys-color-surface-dim: #d8dae0;
+  --md-sys-color-surface-bright: #f7f9ff;
+
+  --md-sys-color-outline: #71787e;
+  --md-sys-color-outline-variant: #c1c7ce;
+
+  --md-sys-color-inverse-surface: #2d3135;
+  --md-sys-color-inverse-on-surface: #eff1f7;
+  --md-sys-color-inverse-primary: #97cbff;
+  --md-sys-color-scrim: #000000;
+
+  /* Material 3 Motion Tokens */
+  --md-sys-motion-easing-emphasized: cubic-bezier(0.2, 0.0, 0.0, 1.0);
+  --md-sys-motion-easing-emphasized-decelerate: cubic-bezier(0.05, 0.7, 0.1, 1.0);
+  --md-sys-motion-easing-emphasized-accelerate: cubic-bezier(0.3, 0.0, 0.8, 0.15);
+  --md-sys-motion-easing-standard: cubic-bezier(0.2, 0.0, 0.0, 1.0);
+  --md-sys-motion-easing-standard-decelerate: cubic-bezier(0.0, 0.0, 0.2, 1.0);
+  --md-sys-motion-easing-standard-accelerate: cubic-bezier(0.3, 0.0, 1.0, 1.0);
+
+  --md-sys-motion-duration-short-1: 50ms;
+  --md-sys-motion-duration-short-2: 100ms;
+  --md-sys-motion-duration-short-3: 150ms;
+  --md-sys-motion-duration-short-4: 200ms;
+  --md-sys-motion-duration-medium-1: 250ms;
+  --md-sys-motion-duration-medium-2: 300ms;
+  --md-sys-motion-duration-medium-3: 350ms;
+  --md-sys-motion-duration-medium-4: 400ms;
+  --md-sys-motion-duration-long-1: 450ms;
+  --md-sys-motion-duration-long-2: 500ms;
+}
+
+.dark {
+  color-scheme: dark;
+  /* Material 3 Dark Theme Color Roles (as per Android Material 3 Guidelines) */
+  --md-sys-color-primary: #97cbff;
+  --md-sys-color-on-primary: #003353;
+  --md-sys-color-primary-container: #004a75;
+  --md-sys-color-on-primary-container: #cfe5ff;
+
+  --md-sys-color-secondary: #b9c8da;
+  --md-sys-color-on-secondary: #233240;
+  --md-sys-color-secondary-container: #3a4857;
+  --md-sys-color-on-secondary-container: #d5e4f6;
+
+  --md-sys-color-tertiary: #ffb3b5;
+  --md-sys-color-on-tertiary: #5f121c;
+  --md-sys-color-tertiary-container: #7d2a30;
+  --md-sys-color-on-tertiary-container: #ffd8d9;
+
+  --md-sys-color-error: #ffb4ab;
+  --md-sys-color-on-error: #690005;
+  --md-sys-color-error-container: #93000a;
+  --md-sys-color-on-error-container: #ffdad6;
+
+  --md-sys-color-background: #101418;
+  --md-sys-color-on-background: #e0e2e8;
+
+  --md-sys-color-surface: #101418;
+  --md-sys-color-on-surface: #e0e2e8;
+  --md-sys-color-surface-variant: #41474d;
+  --md-sys-color-on-surface-variant: #c1c7ce;
+
+  --md-sys-color-surface-container-lowest: #0b0e12;
+  --md-sys-color-surface-container-low: #181c20;
+  --md-sys-color-surface-container: #1c2024;
+  --md-sys-color-surface-container-high: #272a2f;
+  --md-sys-color-surface-container-highest: #31353a;
+
+  --md-sys-color-surface-dim: #101418;
+  --md-sys-color-surface-bright: #363a3f;
+
+  --md-sys-color-outline: #8b9198;
+  --md-sys-color-outline-variant: #41474d;
+
+  --md-sys-color-inverse-surface: #e0e2e8;
+  --md-sys-color-inverse-on-surface: #2d3135;
+  --md-sys-color-inverse-primary: #006399;
+  --md-sys-color-scrim: #000000;
+}
+
+@theme {
+  --color-m3-primary: var(--md-sys-color-primary);
+  --color-m3-on-primary: var(--md-sys-color-on-primary);
+  --color-m3-primary-container: var(--md-sys-color-primary-container);
+  --color-m3-on-primary-container: var(--md-sys-color-on-primary-container);
+
+  --color-m3-secondary: var(--md-sys-color-secondary);
+  --color-m3-on-secondary: var(--md-sys-color-on-secondary);
+  --color-m3-secondary-container: var(--md-sys-color-secondary-container);
+  --color-m3-on-secondary-container: var(--md-sys-color-on-secondary-container);
+
+  --color-m3-tertiary: var(--md-sys-color-tertiary);
+  --color-m3-on-tertiary: var(--md-sys-color-on-tertiary);
+  --color-m3-tertiary-container: var(--md-sys-color-tertiary-container);
+  --color-m3-on-tertiary-container: var(--md-sys-color-on-tertiary-container);
+
+  --color-m3-error: var(--md-sys-color-error);
+  --color-m3-on-error: var(--md-sys-color-on-error);
+  --color-m3-error-container: var(--md-sys-color-error-container);
+  --color-m3-on-error-container: var(--md-sys-color-on-error-container);
+
+  --color-m3-background: var(--md-sys-color-background);
+  --color-m3-on-background: var(--md-sys-color-on-background);
+  --color-m3-surface: var(--md-sys-color-surface);
+  --color-m3-on-surface: var(--md-sys-color-on-surface);
+  --color-m3-surface-variant: var(--md-sys-color-surface-variant);
+  --color-m3-on-surface-variant: var(--md-sys-color-on-surface-variant);
+
+  --color-m3-surface-container-lowest: var(--md-sys-color-surface-container-lowest);
+  --color-m3-surface-container-low: var(--md-sys-color-surface-container-low);
+  --color-m3-surface-container: var(--md-sys-color-surface-container);
+  --color-m3-surface-container-high: var(--md-sys-color-surface-container-high);
+  --color-m3-surface-container-highest: var(--md-sys-color-surface-container-highest);
+
+  --color-m3-surface-dim: var(--md-sys-color-surface-dim);
+  --color-m3-surface-bright: var(--md-sys-color-surface-bright);
+
+  --color-m3-outline: var(--md-sys-color-outline);
+  --color-m3-outline-variant: var(--md-sys-color-outline-variant);
+
+  --color-m3-inverse-surface: var(--md-sys-color-inverse-surface);
+  --color-m3-inverse-on-surface: var(--md-sys-color-inverse-on-surface);
+  --color-m3-inverse-primary: var(--md-sys-color-inverse-primary);
+}
+
+/* Material 3 typography and base styles */
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  font-family: 'Roboto', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  background-color: var(--md-sys-color-background);
+  color: var(--md-sys-color-on-background);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -ms-overflow-style: none !important; /* IE and Edge */
+  scrollbar-width: none !important; /* Firefox */
+}
+
+/* Hide scrollbar on Chrome, Safari, and Opera across all views on the main page */
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+#root::-webkit-scrollbar,
+#app-root::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+}
+
+/* Material 3 Elevation & Surface Motion Utilities */
+.m3-elevation-transition {
+  transition: box-shadow 280ms var(--md-sys-motion-easing-standard),
+              background-color 280ms var(--md-sys-motion-easing-standard),
+              transform 280ms var(--md-sys-motion-easing-standard);
+}
+
+.m3-surface-pressable {
+  transition: transform 150ms var(--md-sys-motion-easing-standard),
+              box-shadow 280ms var(--md-sys-motion-easing-standard);
+}
+.m3-surface-pressable:active {
+  transform: scale(0.985);
+}
+
+/* M3 Drag Handle Indicator */
+.m3-drag-handle {
+  width: 36px;
+  height: 4px;
+  border-radius: 9999px;
+  background-color: var(--md-sys-color-outline-variant);
+  margin: 8px auto 4px auto;
+  opacity: 0.8;
+  cursor: grab;
+}
+.m3-drag-handle:active {
+  cursor: grabbing;
+}
+
+/* Scrollbar Hiding Utilities across WebKit, Blink, Gecko, and Trident */
+.no-scrollbar {
+  -ms-overflow-style: none !important; /* IE and Edge */
+  scrollbar-width: none !important; /* Firefox */
+  -webkit-overflow-scrolling: touch;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+}
+
+/* Immersive Mode (Status Bar Hidden Edge-to-Edge) */
+.app-immersive {
+  overscroll-behavior-y: none;
+}
+.app-immersive header {
+  padding-top: 0px !important;
+}
+
+

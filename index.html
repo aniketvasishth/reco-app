@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <script>
+      (function() {
+        var filterVite = function(args) {
+          if (!args) return false;
+          for (var i = 0; i < args.length; i++) {
+            var arg = args[i];
+            if (!arg) continue;
+            var str = typeof arg === 'string' ? arg : (arg.message || arg.stack || (typeof arg.toString === 'function' ? arg.toString() : ''));
+            if (typeof str === 'string' && (
+              str.indexOf('[vite]') !== -1 ||
+              str.indexOf('vite:') !== -1 ||
+              str.indexOf('websocket') !== -1 ||
+              str.indexOf('WebSocket') !== -1 ||
+              str.indexOf('failed to connect to websocket') !== -1 ||
+              str.indexOf('tesseract.js') !== -1 ||
+              str.indexOf('worker.min.js') !== -1
+            )) {
+              return true;
+            }
+          }
+          return false;
+        };
+        var origError = console.error;
+        console.error = function() {
+          if (filterVite(arguments)) return;
+          origError.apply(console, arguments);
+        };
+        var origWarn = console.warn;
+        console.warn = function() {
+          if (filterVite(arguments)) return;
+          origWarn.apply(console, arguments);
+        };
+        var origLog = console.log;
+        console.log = function() {
+          if (filterVite(arguments)) return;
+          origLog.apply(console, arguments);
+        };
+        var origInfo = console.info;
+        console.info = function() {
+          if (filterVite(arguments)) return;
+          origInfo.apply(console, arguments);
+        };
+        window.addEventListener('unhandledrejection', function(event) {
+          var reason = event && event.reason;
+          if (filterVite([reason])) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+          }
+        }, true);
+        window.addEventListener('error', function(event) {
+          var msg = (event && (event.message || (event.error && event.error.message))) || '';
+          if (filterVite([msg, event && event.error])) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+          }
+        }, true);
+      })();
+    </script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>Reco App</title>
+    <meta name="description" content="Reco - Wholesale Receipt Search and Instant On-Device Inventory Indexer." />
+    <meta property="og:title" content="Reco App" />
+    <meta property="og:description" content="Reco - Wholesale Receipt Search and Instant On-Device Inventory Indexer." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="color-scheme" id="color-scheme-meta" content="light dark" />
+    
+    <!-- PWA & Mobile Web App Standalone Meta Tags with Material 3 Dynamic System Colors -->
+    <meta name="theme-color" id="theme-color-light" media="(prefers-color-scheme: light)" content="#fff0f3" />
+    <meta name="theme-color" id="theme-color-dark" media="(prefers-color-scheme: dark)" content="#221016" />
+    <meta name="theme-color" id="theme-color-meta" content="#fff0f3" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" id="apple-status-bar-meta" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Reco" />
+    <meta name="application-name" content="Reco" />
+    <meta name="msapplication-TileColor" id="ms-tile-color" content="#fff0f3" />
+    
+    <style>
+      html {
+        color-scheme: light dark;
+      }
+      html, body {
+        background-color: #fff0f3;
+        color: #26161b;
+        margin: 0;
+        padding: 0;
+        min-height: 100%;
+        overscroll-behavior-y: none;
+      }
+      html:not(.dark), html:not(.dark) body {
+        color-scheme: light;
+        background-color: #fff0f3;
+        color: #26161b;
+      }
+      html.dark, html.dark body {
+        color-scheme: dark;
+        background-color: #221016;
+        color: #efe0e3;
+      }
+    </style>
+
+    <!-- Standard Favicon and Apple Touch Icons -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+    <link rel="apple-touch-icon" id="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    
+    <!-- Standard PWA Web App Manifest for Android WebAPK and Chrome installation -->
+    <link rel="manifest" id="manifest-link" href="/manifest-light.json" />
+
+    <script>
+      (function() {
+        var savedTheme = null;
+        var savedPalette = 'burgundy_rose';
+        try {
+          savedTheme = localStorage.getItem('costco_receipt_theme');
+          var p = localStorage.getItem('reco_m3_palette_id');
+          if (p) savedPalette = p;
+        } catch (e) {}
+
+        var systemPrefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        // Default mode is system auto unless explicitly saved as light or dark
+        var themeMode = savedTheme || 'system';
+        var isDark = themeMode === 'dark' || (themeMode === 'system' ? systemPrefersDark : false);
+
+        if (isDark) {
+          document.documentElement.classList.add('dark');
+          document.documentElement.style.colorScheme = 'dark';
+        } else {
+          document.documentElement.classList.remove('dark');
+          document.documentElement.style.colorScheme = 'light';
+        }
+
+        // Palette-aware early background color
+        var bgColors = {
+          burgundy_rose: { dark: '#221016', light: '#fff0f3' },
+          peach_teal: { dark: '#1d120f', light: '#fff8f6' },
+          ice_blue: { dark: '#101418', light: '#f7f9ff' },
+          forest_sage: { dark: '#111512', light: '#f7faf4' },
+          royal_violet: { dark: '#16121b', light: '#fdf7ff' },
+          ocean_cyan: { dark: '#0e1515', light: '#f4fbfb' },
+          charcoal_neutral: { dark: '#121315', light: '#fbf8fa' }
+        };
+
+        var activePalette = bgColors[savedPalette] || bgColors.burgundy_rose;
+        var targetBg = isDark ? activePalette.dark : activePalette.light;
+
+        document.documentElement.style.backgroundColor = targetBg;
+        if (document.body) document.body.style.backgroundColor = targetBg;
+
+        var darkMeta = document.getElementById('theme-color-dark');
+        var lightMeta = document.getElementById('theme-color-light');
+        var baseMeta = document.getElementById('theme-color-meta');
+        var colorSchemeMeta = document.getElementById('color-scheme-meta');
+
+        if (themeMode === 'system') {
+          if (darkMeta) {
+            darkMeta.setAttribute('content', activePalette.dark);
+            darkMeta.setAttribute('media', '(prefers-color-scheme: dark)');
+          }
+          if (lightMeta) {
+            lightMeta.setAttribute('content', activePalette.light);
+            lightMeta.setAttribute('media', '(prefers-color-scheme: light)');
+          }
+          if (baseMeta) {
+            baseMeta.removeAttribute('media');
+            baseMeta.setAttribute('content', targetBg);
+          }
+          if (colorSchemeMeta) colorSchemeMeta.setAttribute('content', 'light dark');
+        } else {
+          // Explicit mode: Remove the opposite/conflicting media query tags so
+          // Android Chrome doesn't evaluate (prefers-color-scheme: dark) against a light color
+          if (darkMeta) darkMeta.remove();
+          if (lightMeta) lightMeta.remove();
+          if (baseMeta) {
+            baseMeta.removeAttribute('media');
+            baseMeta.setAttribute('content', targetBg);
+          }
+          if (colorSchemeMeta) colorSchemeMeta.setAttribute('content', isDark ? 'dark' : 'light');
+        }
+
+        var tileMeta = document.getElementById('ms-tile-color');
+        if (tileMeta) tileMeta.setAttribute('content', targetBg);
+
+        var appleStatusMeta = document.getElementById('apple-status-bar-meta');
+        if (appleStatusMeta) appleStatusMeta.setAttribute('content', isDark ? 'black-translucent' : 'default');
+
+        var manifestLink = document.getElementById('manifest-link');
+        if (manifestLink) {
+          manifestLink.setAttribute('href', isDark ? '/manifest-dark.json' : '/manifest-light.json');
+        }
+      })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  </head>
+  <body class="bg-m3-background text-m3-on-background antialiased selection:bg-m3-primary selection:text-m3-on-primary">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
