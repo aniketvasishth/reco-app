@@ -60,7 +60,12 @@ export function ItemCard({
 
   const displayName = item.productName || item.rawName;
   const isOnline = item.orderType === 'Online';
-  const isReturn = !!item.isReturn || item.totalPrice < 0 || item.unitPrice < 0 || /return|refund/i.test(item.rawName);
+  const isReturn =
+    item.totalPrice < 0 ||
+    item.unitPrice < 0 ||
+    /return|refund|retour/i.test(item.rawName || '') ||
+    /return|refund/i.test(item.productName || '') ||
+    (Boolean(item.isReturn) && (item.totalPrice <= 0 || /return|refund/i.test(item.description || '')));
 
   return (
     <motion.div

@@ -23,27 +23,160 @@ provider.setCustomParameters({
   prompt: 'select_account',
 });
 
+export const RECO_GDRIVE_CONNECTED_KEY = 'reco_gdrive_connected';
+export const RECO_GDRIVE_ACCESS_TOKEN_KEY = 'reco_gdrive_access_token';
+export const RECO_GDRIVE_TOKEN_EXPIRY_KEY = 'reco_gdrive_token_expires_at';
+export const RECO_GDRIVE_USER_INFO_KEY = 'reco_gdrive_user_info';
+
+export interface DriveConnectedUser {
+  email: string | null;
+  displayName: string | null;
+  photoURL?: string | null;
+  uid: string;
+}
+
 let isSigningIn = false;
 let cachedAccessToken: string | null = null;
 
 /**
+ * Check if the user has previously connected Google Drive.
+ */
+export function isGoogleDriveConnected(): boolean {
+  try {
+    return localStorage.getItem(RECO_GDRIVE_CONNECTED_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Get saved Google Drive user info from previous sessions.
+ */
+export function getSavedDriveUser(): DriveConnectedUser | null {
+  try {
+    const raw = localStorage.getItem(RECO_GDRIVE_USER_INFO_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Save Google Drive connection and optional token in localStorage.
+ */
+export function saveDriveConnection(user: User | DriveConnectedUser, accessToken?: string | null) {
+  try {
+    localStorage.setItem(RECO_GDRIVE_CONNECTED_KEY, 'true');
+    const userInfo: DriveConnectedUser = {
+      email: user.email,
+      displayName: user.displayName,
+      photoURL: user.photoURL,
+      uid: user.uid,
+    };
+    localStorage.setItem(RECO_GDRIVE_USER_INFO_KEY, JSON.stringify(userInfo));
+
+    if (accessToken) {
+      cachedAccessToken = accessToken;
+      localStorage.setItem(RECO_GDRIVE_ACCESS_TOKEN_KEY, accessToken);
+      // Google OAuth tokens typically last 3600s; keep a safety margin of 3500s
+      const expiresAt = Date.now() + 3500 * 1000;
+      localStorage.setItem(RECO_GDRIVE_TOKEN_EXPIRY_KEY, String(expiresAt));
+    }
+  } catch (e) {
+    console.warn('Failed to save Drive connection info to localStorage', e);
+  }
+}
+
+/**
+ * Clear stored Google Drive connection credentials.
+ */
+export function clearDriveConnection() {
+  try {
+    cachedAccessToken = null;
+    localStorage.removeItem(RECO_GDRIVE_CONNECTED_KEY);
+    localStorage.removeItem(RECO_GDRIVE_ACCESS_TOKEN_KEY);
+    localStorage.removeItem(RECO_GDRIVE_TOKEN_EXPIRY_KEY);
+    localStorage.removeItem(RECO_GDRIVE_USER_INFO_KEY);
+  } catch {}
+}
+
+/**
+ * Retrieve cached access token if available and not expired.
+ */
+export const getCachedAccessToken = (): string | null => {
+  if (cachedAccessToken) {
+    const expiryStr = localStorage.getItem(RECO_GDRIVE_TOKEN_EXPIRY_KEY);
+    if (expiryStr && Date.now() > Number(expiryStr)) {
+      return null;
+    }
+    return cachedAccessToken;
+  }
+  try {
+    const stored = localStorage.getItem(RECO_GDRIVE_ACCESS_TOKEN_KEY);
+    const expiryStr = localStorage.getItem(RECO_GDRIVE_TOKEN_EXPIRY_KEY);
+    if (stored) {
+      if (expiryStr && Date.now() > Number(expiryStr)) {
+        return null;
+      }
+      cachedAccessToken = stored;
+      return stored;
+    }
+  } catch {}
+  return null;
+};
+
+/**
+ * Generates the standardized backup filename: reco_backup_yyyy-mm-dd.json
+ */
+export function getBackupFilename(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `reco_backup_${year}-${month}-${day}.json`;
+}
+
+/**
  * Initialize Google Auth state listener.
+ * Retains connected status across app reloads.
  */
 export const initAuth = (
-  onAuthSuccess?: (user: User, token: string) => void,
+  onAuthSuccess?: (user: User | DriveConnectedUser, token: string | null) => void,
   onAuthFailure?: () => void
 ) => {
+  // 1. Immediately hydrate from stored connection if user previously connected Drive
+  if (isGoogleDriveConnected()) {
+    const savedUser = getSavedDriveUser();
+    if (savedUser && onAuthSuccess) {
+      const token = getCachedAccessToken();
+      onAuthSuccess(savedUser, token);
+    }
+  }
+
+  // 2. Listen to Firebase auth changes
   return onAuthStateChanged(auth, async (user: User | null) => {
     if (user) {
-      if (cachedAccessToken) {
-        if (onAuthSuccess) onAuthSuccess(user, cachedAccessToken);
-      } else if (!isSigningIn) {
-        // User is known in firebase, but token may need refresh or explicit popup
-        if (onAuthFailure) onAuthFailure();
+      // Firebase User session is active
+      saveDriveConnection(user);
+      const token = getCachedAccessToken();
+      if (onAuthSuccess) {
+        onAuthSuccess(user, token);
       }
     } else {
+      // If Firebase reports null user, check if we still have remembered connection
+      if (isGoogleDriveConnected()) {
+        const savedUser = getSavedDriveUser();
+        if (savedUser && onAuthSuccess) {
+          const token = getCachedAccessToken();
+          onAuthSuccess(savedUser, token);
+          return;
+        }
+      }
       cachedAccessToken = null;
-      if (onAuthFailure) onAuthFailure();
+      if (onAuthFailure) {
+        onAuthFailure();
+      }
     }
   });
 };
@@ -61,6 +194,8 @@ export const googleSignIn = async (): Promise<{ user: User; accessToken: string 
     }
 
     cachedAccessToken = credential.accessToken;
+    saveDriveConnection(result.user, credential.accessToken);
+
     return { user: result.user, accessToken: cachedAccessToken };
   } catch (error: any) {
     console.error('Google sign in error:', error);
@@ -70,13 +205,12 @@ export const googleSignIn = async (): Promise<{ user: User; accessToken: string 
   }
 };
 
-export const getCachedAccessToken = (): string | null => {
-  return cachedAccessToken;
-};
-
 export const logoutGoogleUser = async () => {
-  await signOut(auth);
-  cachedAccessToken = null;
+  try {
+    await signOut(auth);
+  } finally {
+    clearDriveConnection();
+  }
 };
 
 export interface DriveBackupFile {
@@ -95,8 +229,8 @@ export async function saveBackupToGoogleDrive(
   token: string
 ): Promise<{ fileId: string; name: string; webViewLink?: string }> {
   const content = generateBackupJson(receipts);
-  const dateStr = new Date().toISOString().slice(0, 10);
-  const filename = `costco_receipts_backup_${dateStr}.json`;
+  const filename = getBackupFilename();
+  const dateStr = filename.replace('reco_backup_', '').replace('.json', '');
 
   const metadata = {
     name: filename,
@@ -133,6 +267,10 @@ export async function saveBackupToGoogleDrive(
     const errorText = await response.text();
     if (response.status === 401) {
       cachedAccessToken = null;
+      try {
+        localStorage.removeItem(RECO_GDRIVE_ACCESS_TOKEN_KEY);
+        localStorage.removeItem(RECO_GDRIVE_TOKEN_EXPIRY_KEY);
+      } catch {}
       throw new Error('Google Drive session expired. Please sign in again.');
     }
     throw new Error(`Google Drive upload error (${response.status}): ${errorText}`);
@@ -150,7 +288,7 @@ export async function saveBackupToGoogleDrive(
  * List files previously created by this app in user's Drive
  */
 export async function listGoogleDriveBackups(token: string): Promise<DriveBackupFile[]> {
-  const query = encodeURIComponent("name contains 'costco_receipts_backup' and trashed=false");
+  const query = encodeURIComponent("(name contains 'reco_backup' or name contains 'costco_receipts_backup') and trashed=false");
   const response = await fetch(
     `https://www.googleapis.com/drive/v3/files?q=${query}&fields=files(id,name,createdTime,size,webViewLink)&orderBy=createdTime desc&pageSize=15`,
     {
@@ -163,6 +301,10 @@ export async function listGoogleDriveBackups(token: string): Promise<DriveBackup
   if (!response.ok) {
     if (response.status === 401) {
       cachedAccessToken = null;
+      try {
+        localStorage.removeItem(RECO_GDRIVE_ACCESS_TOKEN_KEY);
+        localStorage.removeItem(RECO_GDRIVE_TOKEN_EXPIRY_KEY);
+      } catch {}
       throw new Error('Google Drive session expired. Please sign in again.');
     }
     throw new Error(`Failed to list Google Drive backups: ${response.statusText}`);

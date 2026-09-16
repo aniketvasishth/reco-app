@@ -484,5 +484,82 @@ Keep all item descriptions concise (maximum 15 words per item). Return strictly 
     };
   }
 
+  // Ensure standard positive purchases are never marked as returns
+  const isPurchase =
+    (parsed.total !== undefined && parsed.total > 0) ||
+    (parsed.subtotal !== undefined && parsed.subtotal > 0);
+
+  if (isPurchase) {
+    parsed.isReturn = false;
+  }
+
+  if (Array.isArray(parsed.items) && isPurchase) {
+    const parentMap = new Map<string, number>();
+    parsed.items.forEach((it: any, idx: number) => {
+      const cleanId = String(it.itemId || '').replace(/[^a-zA-Z0-9]/g, '');
+      const rawLower = String(it.rawName || '').toLowerCase();
+      const isDiscount =
+        String(it.rawName || '').startsWith('/') ||
+        rawLower.startsWith('tpd') ||
+        rawLower.startsWith('cpn') ||
+        String(it.productName || '').toLowerCase().includes('instant savings') ||
+        String(it.productName || '').toLowerCase().includes('coupon');
+      if (cleanId && !isDiscount) {
+        parentMap.set(cleanId, idx);
+      }
+    });
+
+    const finalItems: any[] = [];
+    for (let idx = 0; idx < parsed.items.length; idx++) {
+      const it = parsed.items[idx];
+      const rawName = String(it.rawName || '');
+      const rawLower = rawName.toLowerCase();
+      const prodLower = String(it.productName || '').toLowerCase();
+
+      const isDiscountLine =
+        rawName.startsWith('/') ||
+        rawLower.startsWith('tpd') ||
+        rawLower.startsWith('cpn') ||
+        prodLower.includes('instant savings') ||
+        prodLower.includes('coupon');
+
+      if (isDiscountLine) {
+        const matchedNum = rawName.match(/(?:\/|\b)([0-9]{4,8})\b/);
+        const targetId = matchedNum ? matchedNum[1] : null;
+        const discountAmount = Math.abs(it.discount || it.totalPrice || it.unitPrice || 0);
+
+        let parentIdx: number | undefined;
+        if (targetId && parentMap.has(targetId)) {
+          parentIdx = parentMap.get(targetId);
+        } else if (finalItems.length > 0) {
+          parentIdx = finalItems.length - 1;
+        }
+
+        if (parentIdx !== undefined && finalItems[parentIdx] && discountAmount > 0) {
+          const parent = finalItems[parentIdx];
+          parent.discount = Number(((parent.discount || 0) + discountAmount).toFixed(2));
+          continue;
+        }
+      }
+
+      const hasExplicitReturnWord =
+        rawLower.includes('(return)') ||
+        rawLower.includes('return item') ||
+        rawLower.includes('refund') ||
+        rawLower.includes('retour') ||
+        prodLower.includes('(return)') ||
+        prodLower.includes('refunded item');
+
+      it.isReturn = hasExplicitReturnWord;
+      if (!it.isReturn) {
+        it.totalPrice = Math.abs(Number(it.totalPrice) || Number(it.unitPrice) || 0);
+        it.unitPrice = Math.abs(Number(it.unitPrice) || 0);
+      }
+
+      finalItems.push(it);
+    }
+    parsed.items = finalItems;
+  }
+
   return parsed;
 }

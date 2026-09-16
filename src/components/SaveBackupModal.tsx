@@ -35,6 +35,10 @@ import {
   downloadGoogleDriveFile,
   getCachedAccessToken,
   DriveBackupFile,
+  DriveConnectedUser,
+  getSavedDriveUser,
+  isGoogleDriveConnected,
+  getBackupFilename,
 } from '../services/googleDriveService';
 import {
   isAutoSyncEnabled,
@@ -66,8 +70,8 @@ export function SaveBackupModal({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Google Drive State
-  const [user, setUser] = useState<User | null>(null);
-  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [user, setUser] = useState<User | DriveConnectedUser | null>(() => getSavedDriveUser());
+  const [accessToken, setAccessToken] = useState<string | null>(() => getCachedAccessToken());
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [isSavingDrive, setIsSavingDrive] = useState(false);
   const [driveSuccessData, setDriveSuccessData] = useState<{
@@ -109,11 +113,13 @@ export function SaveBackupModal({
     const unsubscribe = initAuth(
       (authedUser, token) => {
         setUser(authedUser);
-        setAccessToken(token);
+        if (token) {
+          setAccessToken(token);
+        }
       },
       () => {
-        const cached = getCachedAccessToken();
-        if (!cached) {
+        if (!isGoogleDriveConnected()) {
+          setUser(null);
           setAccessToken(null);
         }
       }
@@ -128,9 +134,8 @@ export function SaveBackupModal({
     setIsSavingLocal(true);
     setLocalSuccessMsg(null);
     try {
-      const dateStr = new Date().toISOString().slice(0, 10);
       const jsonContent = generateBackupJson(receipts);
-      const filename = `costco_receipts_backup_${dateStr}.json`;
+      const filename = getBackupFilename();
 
       const result = await saveToFileSystem(jsonContent, filename, 'application/json');
       setLocalSuccessMsg(`Saved backup as "${result.filename}"`);
@@ -219,10 +224,24 @@ export function SaveBackupModal({
   };
 
   // Handle Save to Google Drive (Triggers confirmation dialog)
-  const handleInitiateDriveSave = () => {
-    if (!accessToken) {
-      handleGoogleSignIn();
-      return;
+  const handleInitiateDriveSave = async () => {
+    let token = accessToken || getCachedAccessToken();
+    if (!token) {
+      try {
+        setIsAuthenticating(true);
+        const result = await googleSignIn();
+        if (result) {
+          setUser(result.user);
+          setAccessToken(result.accessToken);
+        } else {
+          return;
+        }
+      } catch (err: any) {
+        setDriveError(err.message || 'Google Drive authentication required');
+        return;
+      } finally {
+        setIsAuthenticating(false);
+      }
     }
     setPendingDriveSave(true);
   };
@@ -230,21 +249,52 @@ export function SaveBackupModal({
   // Execute confirmed Drive Save
   const handleExecuteDriveSave = async () => {
     setPendingDriveSave(false);
-    if (!accessToken) return;
+    let token = accessToken || getCachedAccessToken();
+    if (!token) {
+      try {
+        const result = await googleSignIn();
+        if (result) {
+          setUser(result.user);
+          setAccessToken(result.accessToken);
+          token = result.accessToken;
+        } else {
+          return;
+        }
+      } catch (err: any) {
+        setDriveError(err.message || 'Authentication required');
+        return;
+      }
+    }
 
     setIsSavingDrive(true);
     setDriveError(null);
     setDriveSuccessData(null);
 
     try {
-      const result = await saveBackupToGoogleDrive(receipts, accessToken);
+      const result = await saveBackupToGoogleDrive(receipts, token);
       setDriveSuccessData(result);
       onShowSnackbar(`Saved "${result.name}" directly to your Google Drive!`);
       // Refresh list if open
       if (showDriveBackups) {
-        fetchDriveBackups(accessToken);
+        fetchDriveBackups(token);
       }
     } catch (err: any) {
+      if (err.message?.includes('expired') || err.message?.includes('401')) {
+        try {
+          const fresh = await googleSignIn();
+          if (fresh) {
+            setUser(fresh.user);
+            setAccessToken(fresh.accessToken);
+            const retryResult = await saveBackupToGoogleDrive(receipts, fresh.accessToken);
+            setDriveSuccessData(retryResult);
+            onShowSnackbar(`Saved "${retryResult.name}" directly to your Google Drive!`);
+            if (showDriveBackups) {
+              fetchDriveBackups(fresh.accessToken);
+            }
+            return;
+          }
+        } catch (freshErr) {}
+      }
       console.error('Drive save error:', err);
       setDriveError(err.message || 'Failed to save to Google Drive');
       onShowSnackbar(`Drive save error: ${err.message}`);
@@ -268,19 +318,47 @@ export function SaveBackupModal({
   };
 
   // Toggle Drive Backups List
-  const handleToggleDriveBackups = () => {
-    if (!showDriveBackups && accessToken) {
-      fetchDriveBackups(accessToken);
+  const handleToggleDriveBackups = async () => {
+    const next = !showDriveBackups;
+    setShowDriveBackups(next);
+    if (next) {
+      let token = accessToken || getCachedAccessToken();
+      if (!token) {
+        try {
+          const fresh = await googleSignIn();
+          if (fresh) {
+            setUser(fresh.user);
+            setAccessToken(fresh.accessToken);
+            token = fresh.accessToken;
+          }
+        } catch (e) {}
+      }
+      if (token) {
+        fetchDriveBackups(token);
+      }
     }
-    setShowDriveBackups(!showDriveBackups);
   };
 
   // Restore from a Drive File
   const handleRestoreFromDriveFile = async (file: DriveBackupFile) => {
-    if (!accessToken) return;
+    let token = accessToken || getCachedAccessToken();
+    if (!token) {
+      try {
+        const fresh = await googleSignIn();
+        if (fresh) {
+          setUser(fresh.user);
+          setAccessToken(fresh.accessToken);
+          token = fresh.accessToken;
+        } else {
+          return;
+        }
+      } catch {
+        return;
+      }
+    }
     try {
       onShowSnackbar(`Downloading "${file.name}" from your Google Drive...`);
-      const text = await downloadGoogleDriveFile(file.id, accessToken);
+      const text = await downloadGoogleDriveFile(file.id, token);
       const parsedReceipts = parseRestoredBackupJson(text);
 
       setPendingRestore({

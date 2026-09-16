@@ -161,8 +161,6 @@ export function parseCostcoCsv(csvText: string, fileName: string): CostcoReceipt
       rawName.toLowerCase().includes('return') ||
       rawName.toLowerCase().includes('refund') ||
       rawName.toLowerCase().includes('retour') ||
-      rawItemId.startsWith('/') ||
-      rawName.startsWith('/') ||
       rawType.includes('return') ||
       rawType.includes('refund') ||
       orderNumber.toLowerCase().includes('return') ||
@@ -442,11 +440,14 @@ export function parseCostcoJson(jsonContent: any, fileName: string): CostcoRecei
         actualName.startsWith('CPN/') ||
         actualName.includes('TPD') ||
         actualName === '/0' ||
+        actualName.startsWith('/') ||
+        actualName.toLowerCase().includes('instant savings') ||
+        actualName.toLowerCase().includes('savings') ||
         (amount < 0 && unitPrice === 0 && unit <= 0 && items.length > 0);
 
       if (isCouponOrTpd) {
         const discountVal = Math.abs(amount);
-        const targetRef = actualName.replace(/^(TPD\/|CPN\/)/i, '').trim();
+        const targetRef = actualName.replace(/^(TPD\/|CPN\/|\/\s*)/i, '').trim();
 
         let matchedItem: CostcoItem | undefined;
         if (targetRef) {
@@ -474,11 +475,6 @@ export function parseCostcoJson(jsonContent: any, fileName: string): CostcoRecei
         it.isReturn === true ||
         String(it.transactionType || '').toLowerCase().includes('refund') ||
         String(it.transactionType || '').toLowerCase().includes('return') ||
-        amount < 0 ||
-        unitPrice < 0 ||
-        unit < 0 ||
-        rawItemId.startsWith('/') ||
-        actualName.startsWith('/') ||
         actualName.toLowerCase().includes('return') ||
         actualName.toLowerCase().includes('refund') ||
         actualName.toLowerCase().includes('retour');
@@ -520,16 +516,15 @@ export function parseCostcoJson(jsonContent: any, fileName: string): CostcoRecei
       });
     }
 
-    const hasAnyReturn = items.some((it) => it.isReturn);
-    const isOrderReturn =
-      orderIsRefund ||
-      hasAnyReturn ||
-      Number(order.total || order.orderTotal || 0) < 0;
-
     const calculatedSubtotal = items.reduce((sum, item) => sum + item.totalPrice, 0);
     const subtotal = Number(order.subTotal !== undefined ? order.subTotal : (order.subtotal || calculatedSubtotal));
     const tax = Number(order.taxes !== undefined ? order.taxes : (order.tax || (order.total ? order.total - subtotal : 0)));
     const total = Number(order.total !== undefined ? order.total : (subtotal + tax));
+
+    const isOrderReturn =
+      orderIsRefund ||
+      total < 0 ||
+      subtotal < 0;
 
     return {
       id: receiptId,
@@ -620,45 +615,118 @@ export function parseDateToMs(dateStr?: string | null): number {
  */
 export function normalizeCostcoReceipts(receipts: CostcoReceipt[]): CostcoReceipt[] {
   const normalized = receipts.map((receipt) => {
-    const orderIsRefund =
-      receipt.isReturn === true ||
-      String(receipt.orderNumber || '').toLowerCase().includes('return') ||
-      String(receipt.orderNumber || '').toLowerCase().includes('refund') ||
-      String(receipt.warehouseLocation || '').toLowerCase().includes('refund') ||
-      String(receipt.paymentCard || '').toLowerCase().includes('refund') ||
-      (receipt.total !== undefined && receipt.total < 0) ||
-      (receipt.subtotal !== undefined && receipt.subtotal < 0);
+    // Determine if this receipt is a net positive purchase transaction
+    const isNetPositive =
+      (receipt.total !== undefined && receipt.total > 0) ||
+      (receipt.subtotal !== undefined && receipt.subtotal > 0);
 
-    const updatedItems = receipt.items.map((item) => {
+    // A receipt is ONLY a return/refund order if the net total is negative or explicitly a refund slip
+    const orderIsRefund = !isNetPositive && (
+      (receipt.total !== undefined && receipt.total < 0) ||
+      (receipt.subtotal !== undefined && receipt.subtotal < 0) ||
+      (receipt.total === 0 && (
+        String(receipt.orderNumber || '').toLowerCase().includes('refund') ||
+        String(receipt.orderNumber || '').toLowerCase().includes('return') ||
+        String(receipt.paymentCard || '').toLowerCase().includes('refund')
+      ))
+    );
+
+    // For purchase receipts, inspect items and fold instant savings / manufacturer coupon lines into parent items
+    const workingItems: CostcoItem[] = (receipt.items || []).map((it) => ({ ...it }));
+    const parentMap = new Map<string, number>(); // itemId -> index in workingItems
+
+    workingItems.forEach((it, idx) => {
+      const cleanId = String(it.itemId || '').replace(/[^a-zA-Z0-9]/g, '');
+      const rawLower = (it.rawName || '').toLowerCase();
+      const prodLower = (it.productName || '').toLowerCase();
+      const isDiscount =
+        it.rawName?.startsWith('/') ||
+        rawLower.startsWith('tpd') ||
+        rawLower.startsWith('cpn') ||
+        prodLower.includes('instant savings') ||
+        prodLower.includes('coupon');
+
+      if (cleanId && !isDiscount) {
+        parentMap.set(cleanId, idx);
+      }
+    });
+
+    const itemsToKeep: CostcoItem[] = [];
+    for (let idx = 0; idx < workingItems.length; idx++) {
+      const item = workingItems[idx];
+      const rawName = item.rawName || '';
+      const rawLower = rawName.toLowerCase();
+      const prodLower = (item.productName || '').toLowerCase();
+
+      const isDiscountLine =
+        rawName.startsWith('/') ||
+        rawLower.startsWith('tpd') ||
+        rawLower.startsWith('cpn') ||
+        prodLower.includes('instant savings') ||
+        prodLower.includes('coupon');
+
+      if (isDiscountLine && isNetPositive) {
+        // Find targeted item number: e.g. "/ 1953084" -> "1953084"
+        const matchedNum = rawName.match(/(?:\/|\b)([0-9]{4,8})\b/);
+        const targetId = matchedNum ? matchedNum[1] : null;
+        const discountAmount = Math.abs(item.discount || item.totalPrice || item.unitPrice || 0);
+
+        let parentIdx: number | undefined;
+        if (targetId && parentMap.has(targetId)) {
+          parentIdx = parentMap.get(targetId);
+        } else if (itemsToKeep.length > 0) {
+          parentIdx = itemsToKeep.length - 1;
+        }
+
+        if (parentIdx !== undefined && itemsToKeep[parentIdx] && discountAmount > 0) {
+          const parent = itemsToKeep[parentIdx];
+          parent.discount = Number(((parent.discount || 0) + discountAmount).toFixed(2));
+          continue; // Successfully folded coupon into parent item
+        }
+      }
+
+      itemsToKeep.push(item);
+    }
+
+    const updatedItems = itemsToKeep.map((item) => {
       const rawNameLower = (item.rawName || '').toLowerCase();
-      const isReturn =
-        item.isReturn === true ||
-        orderIsRefund ||
-        item.totalPrice < 0 ||
-        item.unitPrice < 0 ||
-        item.itemId.startsWith('/') ||
-        item.rawName.startsWith('/') ||
-        rawNameLower.includes('return') ||
+      const prodNameLower = (item.productName || '').toLowerCase();
+
+      // Explicit return marker in item text
+      const hasExplicitReturnWord =
+        rawNameLower.includes('(return)') ||
+        rawNameLower.includes('return item') ||
         rawNameLower.includes('refund') ||
         rawNameLower.includes('retour') ||
-        (item.description && item.description.toLowerCase().includes('returned item'));
+        prodNameLower.includes('(return)') ||
+        prodNameLower.includes('refunded item') ||
+        Boolean(item.description && item.description.toLowerCase().includes('returned item'));
+
+      let isReturn = false;
+      if (orderIsRefund) {
+        // Entire receipt is an approved refund slip
+        isReturn = true;
+      } else if (isNetPositive) {
+        // Standard purchase: normal grocery/household items are NEVER returns!
+        isReturn = hasExplicitReturnWord;
+      } else {
+        isReturn = hasExplicitReturnWord || Boolean(item.isReturn && item.totalPrice < 0);
+      }
 
       const absTotal = Math.abs(item.totalPrice);
       const absUnit = Math.abs(item.unitPrice);
 
       return {
         ...item,
-        isReturn: !!isReturn,
+        isReturn,
         totalPrice: isReturn ? -absTotal : absTotal,
         unitPrice: isReturn ? -absUnit : absUnit,
       };
     });
 
-    const hasAnyReturn = updatedItems.some((it) => it.isReturn);
-
     return {
       ...receipt,
-      isReturn: orderIsRefund || hasAnyReturn,
+      isReturn: orderIsRefund,
       items: updatedItems,
     };
   });

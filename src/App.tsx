@@ -58,6 +58,7 @@ import { SAMPLE_COSTCO_RECEIPTS, isSampleReceipt } from './utils/sampleData';
 import { scanReceiptWithAiOrFallback, scanMultiSectionReceiptWithAiOrFallback } from './utils/receiptScanner';
 import { isPdfFile } from './utils/pdfReceiptHelper';
 import { useImmersiveMode } from './utils/immersiveMode';
+import { initAuth } from './services/googleDriveService';
 
 const STORAGE_KEY = 'costco_receipt_searcher_data_v1';
 const THEME_KEY = 'costco_receipt_theme';
@@ -305,6 +306,16 @@ export default function App() {
     }
   };
 
+  // Initialize Google Auth state listener on app load
+  useEffect(() => {
+    const unsubscribe = initAuth();
+    return () => {
+      if (typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
+    };
+  }, []);
+
   // Persist receipts locally
   useEffect(() => {
     try {
@@ -369,7 +380,13 @@ export default function App() {
       }
 
       // Returns search
-      if (isReturnSearch && (item.isReturn || item.totalPrice < 0 || /return|refund/i.test(item.rawName))) {
+      if (isReturnSearch && (
+        item.totalPrice < 0 ||
+        item.unitPrice < 0 ||
+        /return|refund|retour/i.test(item.rawName || '') ||
+        /return|refund/i.test(item.productName || '') ||
+        (Boolean(item.isReturn) && item.totalPrice <= 0)
+      )) {
         return true;
       }
 

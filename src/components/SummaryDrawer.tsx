@@ -153,7 +153,13 @@ export function SummaryDrawer({
 
   // Helper function to identify return items
   const isItemReturn = (it: CostcoItem) => {
-    return !!it.isReturn || it.totalPrice < 0 || it.unitPrice < 0 || /return|refund/i.test(it.rawName);
+    return (
+      it.totalPrice < 0 ||
+      it.unitPrice < 0 ||
+      /return|refund|retour/i.test(it.rawName || '') ||
+      /return|refund/i.test(it.productName || '') ||
+      (Boolean(it.isReturn) && (it.totalPrice <= 0 || /return|refund/i.test(it.description || '')))
+    );
   };
 
   const purchaseItems = items.filter((it) => !isItemReturn(it));

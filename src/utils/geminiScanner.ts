@@ -127,7 +127,12 @@ function buildCostcoReceiptFromAiResult(
   const warehouseLocation = data.warehouseLocation || 'Costco Wholesale';
   const paymentCard = data.paymentCard || 'Costco Anywhere Visa';
 
-  const items: CostcoItem[] = (data.items || []).map((it, idx) => {
+  const rawTotal = data.total != null ? Number(data.total) : null;
+  const rawSubtotal = data.subtotal != null ? Number(data.subtotal) : null;
+  const isPurchase = (rawTotal !== null && rawTotal > 0) || (rawSubtotal !== null && rawSubtotal > 0);
+  const isOrderReturn = !isPurchase && ((rawTotal !== null && rawTotal < 0) || (rawSubtotal !== null && rawSubtotal < 0));
+
+  const parsedItems: CostcoItem[] = (data.items || []).map((it, idx) => {
     // Cross-verify with local catalogue for high-fidelity fallback info
     const catalog = resolveCostcoItemDetails(it.itemId, it.rawName);
 
@@ -137,7 +142,25 @@ function buildCostcoReceiptFromAiResult(
     const description = it.description || catalog.description || '';
     const packageDetails = it.packageDetails || catalog.packageDetails || '';
 
-    const isReturn = Boolean(it.isReturn || it.totalPrice < 0);
+    const rawNameLower = (it.rawName || '').toLowerCase();
+    const prodNameLower = (productName || '').toLowerCase();
+    const hasExplicitReturnWord =
+      rawNameLower.includes('(return)') ||
+      rawNameLower.includes('return item') ||
+      rawNameLower.includes('refund') ||
+      rawNameLower.includes('retour') ||
+      prodNameLower.includes('(return)') ||
+      prodNameLower.includes('refunded item');
+
+    let isReturn = false;
+    if (isOrderReturn) {
+      isReturn = true;
+    } else if (isPurchase) {
+      isReturn = hasExplicitReturnWord;
+    } else {
+      isReturn = hasExplicitReturnWord || Boolean(it.isReturn && it.totalPrice < 0);
+    }
+
     const unitPrice = Math.abs(Number(it.unitPrice) || 0);
     const rawTotalPrice = Number(it.totalPrice) || unitPrice;
     const totalPrice = isReturn ? -Math.abs(rawTotalPrice) : Math.abs(rawTotalPrice);
@@ -154,7 +177,7 @@ function buildCostcoReceiptFromAiResult(
       webSourceUrl: catalog.webSourceUrl,
       isEnriched: true,
       isReturn,
-      quantity: Number(it.quantity) || 1,
+      quantity: Math.abs(Number(it.quantity)) || 1,
       unitPrice,
       totalPrice,
       discount: it.discount ? Math.abs(Number(it.discount)) : undefined,
@@ -167,10 +190,57 @@ function buildCostcoReceiptFromAiResult(
     };
   });
 
-  const calculatedSubtotal = items.reduce((sum, i) => sum + i.totalPrice, 0);
-  const subtotal = data.subtotal != null ? Number(data.subtotal) : calculatedSubtotal;
+  // Fold any instant savings coupon lines (e.g. "/ 1953084" or "Instant Savings") into their parent items
+  const parentMap = new Map<string, number>();
+  parsedItems.forEach((it, idx) => {
+    const cleanId = String(it.itemId || '').replace(/[^a-zA-Z0-9]/g, '');
+    const isDiscount =
+      it.rawName?.startsWith('/') ||
+      it.rawName?.toLowerCase().includes('tpd') ||
+      it.productName?.toLowerCase().includes('instant savings') ||
+      it.productName?.toLowerCase().includes('coupon');
+    if (cleanId && !isDiscount) {
+      parentMap.set(cleanId, idx);
+    }
+  });
+
+  const finalItems: CostcoItem[] = [];
+  for (let idx = 0; idx < parsedItems.length; idx++) {
+    const item = parsedItems[idx];
+    const rawName = item.rawName || '';
+    const prodLower = (item.productName || '').toLowerCase();
+    const isDiscountLine =
+      rawName.startsWith('/') ||
+      rawName.toLowerCase().includes('tpd') ||
+      prodLower.includes('instant savings') ||
+      prodLower.includes('coupon');
+
+    if (isDiscountLine && isPurchase) {
+      const matchedNum = rawName.match(/(?:\/|\b)([0-9]{4,8})\b/);
+      const targetId = matchedNum ? matchedNum[1] : null;
+      const discountAmount = Math.abs(item.discount || item.totalPrice || item.unitPrice || 0);
+
+      let parentIdx: number | undefined;
+      if (targetId && parentMap.has(targetId)) {
+        parentIdx = parentMap.get(targetId);
+      } else if (finalItems.length > 0) {
+        parentIdx = finalItems.length - 1;
+      }
+
+      if (parentIdx !== undefined && finalItems[parentIdx] && discountAmount > 0) {
+        const parent = finalItems[parentIdx];
+        parent.discount = Number(((parent.discount || 0) + discountAmount).toFixed(2));
+        continue;
+      }
+    }
+
+    finalItems.push(item);
+  }
+
+  const calculatedSubtotal = finalItems.reduce((sum, i) => sum + i.totalPrice, 0);
+  const subtotal = rawSubtotal != null ? rawSubtotal : calculatedSubtotal;
   const tax = data.tax != null ? Number(data.tax) : 0;
-  const total = data.total != null ? Number(data.total) : subtotal + tax;
+  const total = rawTotal != null ? rawTotal : subtotal + tax;
 
   return {
     id: receiptId,
@@ -187,8 +257,8 @@ function buildCostcoReceiptFromAiResult(
     rawImagePreview: rawPreviewUrl,
     notes: data.notes,
     uploadedAt: new Date().toISOString(),
-    isReturn: Boolean(data.isReturn || total < 0),
-    items,
+    isReturn: isOrderReturn,
+    items: finalItems,
   };
 }
 

@@ -119,7 +119,7 @@ export function ReceiptDetailModal({ receipt, onClose, onSearchItemId }: Receipt
             {/* Receipt Line Items */}
             <div className="p-5 sm:p-6 overflow-y-auto flex-1 space-y-3">
               <div className="flex items-center justify-between text-xs font-semibold text-m3-on-surface-variant uppercase tracking-wider pb-1.5 border-b border-m3-outline-variant/40">
-                <span>Items Purchased ({receipt.items.length})</span>
+                <span>{receipt.isReturn ? 'Items Refunded' : 'Items Purchased'} ({receipt.items.length})</span>
                 <span>Amount</span>
               </div>
 
@@ -155,13 +155,15 @@ export function ReceiptDetailModal({ receipt, onClose, onSearchItemId }: Receipt
                         </span>
                       )}
                       <span className="text-[11px] text-m3-on-surface-variant">
-                        Qty: {it.quantity} × ${it.unitPrice.toFixed(2)}
+                        Qty: {it.quantity} × ${Math.abs(it.unitPrice).toFixed(2)}
                       </span>
                     </div>
 
                     <div className="text-right shrink-0">
-                      <span className="text-xs sm:text-sm font-bold text-m3-on-surface block font-mono">
-                        ${it.totalPrice.toFixed(2)}
+                      <span className={`text-xs sm:text-sm font-bold block font-mono ${
+                        it.isReturn ? 'text-m3-error dark:text-[#ffb4ab]' : 'text-m3-on-surface'
+                      }`}>
+                        {it.isReturn ? `-$${Math.abs(it.totalPrice).toFixed(2)}` : `$${it.totalPrice.toFixed(2)}`}
                       </span>
                       {it.discount && it.discount > 0 && (
                         <span className="text-[10px] text-m3-error font-semibold block">
@@ -177,15 +179,23 @@ export function ReceiptDetailModal({ receipt, onClose, onSearchItemId }: Receipt
               <div className="mt-4 pt-3 border-t border-dashed border-m3-outline-variant/60 space-y-1.5 text-xs text-m3-on-surface-variant">
                 <div className="flex justify-between">
                   <span>Subtotal:</span>
-                  <span className="font-semibold text-m3-on-surface font-mono">${receipt.subtotal.toFixed(2)}</span>
+                  <span className="font-semibold text-m3-on-surface font-mono">
+                    {receipt.subtotal < 0 ? `-$${Math.abs(receipt.subtotal).toFixed(2)}` : `$${receipt.subtotal.toFixed(2)}`}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span>Tax:</span>
-                  <span className="font-semibold text-m3-on-surface font-mono">${receipt.tax.toFixed(2)}</span>
+                  <span className="font-semibold text-m3-on-surface font-mono">
+                    {receipt.tax < 0 ? `-$${Math.abs(receipt.tax).toFixed(2)}` : `$${receipt.tax.toFixed(2)}`}
+                  </span>
                 </div>
                 <div className="flex justify-between text-sm font-bold text-m3-on-surface pt-2 border-t border-m3-outline-variant/40">
-                  <span>Total Paid:</span>
-                  <span className="text-emerald-600 dark:text-emerald-400 font-mono">${receipt.total.toFixed(2)}</span>
+                  <span>{receipt.isReturn ? 'Total Refunded:' : 'Total Paid:'}</span>
+                  <span className={`font-mono ${
+                    receipt.isReturn ? 'text-m3-error dark:text-[#ffb4ab]' : 'text-emerald-600 dark:text-emerald-400'
+                  }`}>
+                    {receipt.total < 0 ? `-$${Math.abs(receipt.total).toFixed(2)}` : `$${receipt.total.toFixed(2)}`}
+                  </span>
                 </div>
               </div>
             </div>

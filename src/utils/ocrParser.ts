@@ -284,11 +284,21 @@ export function extractReceiptFromText(text: string, fileName = 'receipt.jpg'): 
       const match = line.match(itemRegex);
       if (match) {
         const rawItemId = match[1];
-        const isReturn = rawItemId.startsWith('/') || match[4] === '-' || /return|refund/i.test(match[2]);
-        const itemId = rawItemId.replace(/^\//, '');
         const rawName = match[2].trim();
         const basePrice = parseFloat(match[3]);
-        const price = isReturn ? -Math.abs(basePrice) : basePrice;
+
+        const isCouponLine = rawItemId.startsWith('/') || rawName.startsWith('/');
+        if (isCouponLine && items.length > 0) {
+          if (!isNaN(basePrice) && basePrice > 0) {
+            const prevItem = items[items.length - 1];
+            prevItem.discount = Number(((prevItem.discount || 0) + basePrice).toFixed(2));
+          }
+          continue;
+        }
+
+        const isReturn = /return|refund|retour/i.test(rawName);
+        const itemId = rawItemId.replace(/^\//, '');
+        const price = isReturn ? -Math.abs(basePrice) : Math.abs(basePrice);
 
         // Check next line for potential discount e.g. "1142277 / 2.00-" or "DISCOUNT 2.00-"
         let discount: number | undefined = undefined;

@@ -52,6 +52,10 @@ import {
   listGoogleDriveBackups,
   downloadGoogleDriveFile,
   DriveBackupFile,
+  DriveConnectedUser,
+  getSavedDriveUser,
+  getCachedAccessToken,
+  isGoogleDriveConnected,
 } from '../services/googleDriveService';
 import {
   getLastSyncTime,
@@ -118,8 +122,8 @@ export function SettingsDrawer({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Google Drive State
-  const [user, setUser] = useState<User | null>(null);
-  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [user, setUser] = useState<User | DriveConnectedUser | null>(() => getSavedDriveUser());
+  const [accessToken, setAccessToken] = useState<string | null>(() => getCachedAccessToken());
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [isSavingDrive, setIsSavingDrive] = useState(false);
   const [driveBackups, setDriveBackups] = useState<DriveBackupFile[]>([]);
@@ -137,11 +141,15 @@ export function SettingsDrawer({
     const unsubscribe = initAuth(
       (u, token) => {
         setUser(u);
-        setAccessToken(token);
+        if (token) {
+          setAccessToken(token);
+        }
       },
       () => {
-        setUser(null);
-        setAccessToken(null);
+        if (!isGoogleDriveConnected()) {
+          setUser(null);
+          setAccessToken(null);
+        }
       }
     );
     return () => unsubscribe();
@@ -191,18 +199,53 @@ export function SettingsDrawer({
   };
 
   const handleExecuteDriveSave = async () => {
-    if (!accessToken) {
-      handleGoogleSignIn();
-      return;
+    let token = accessToken || getCachedAccessToken();
+    if (!token) {
+      try {
+        setIsAuthenticating(true);
+        const result = await googleSignIn();
+        if (result) {
+          setUser(result.user);
+          setAccessToken(result.accessToken);
+          token = result.accessToken;
+        } else {
+          return;
+        }
+      } catch (err: any) {
+        onShowSnackbar(err.message || 'Please authenticate with Google Drive', 'Error');
+        return;
+      } finally {
+        setIsAuthenticating(false);
+      }
     }
+
     try {
       setIsSavingDrive(true);
-      const res = await saveBackupToGoogleDrive(receipts, accessToken);
+      const res = await saveBackupToGoogleDrive(receipts, token);
       const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       setLastSyncedTime(nowStr);
-      onShowSnackbar(`Successfully backed up ${receipts.length} receipts to Google Drive!`, 'Google Drive');
-      loadBackups(accessToken);
+      onShowSnackbar(`Successfully backed up ${receipts.length} receipts to Google Drive! (${res.name})`, 'Google Drive');
+      loadBackups(token);
     } catch (err: any) {
+      // If token expired (401), prompt one transparent refresh
+      if (err.message?.includes('expired') || err.message?.includes('401')) {
+        try {
+          const fresh = await googleSignIn();
+          if (fresh) {
+            setUser(fresh.user);
+            setAccessToken(fresh.accessToken);
+            const res = await saveBackupToGoogleDrive(receipts, fresh.accessToken);
+            const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            setLastSyncedTime(nowStr);
+            onShowSnackbar(`Successfully backed up ${receipts.length} receipts to Google Drive! (${res.name})`, 'Google Drive');
+            loadBackups(fresh.accessToken);
+            return;
+          }
+        } catch (reAuthErr: any) {
+          onShowSnackbar(reAuthErr.message || 'Google Drive session expired. Please sign in again.', 'Error');
+          return;
+        }
+      }
       onShowSnackbar(err.message || 'Failed to save to Google Drive', 'Error');
     } finally {
       setIsSavingDrive(false);
@@ -210,11 +253,52 @@ export function SettingsDrawer({
     }
   };
 
+  const handleToggleBackups = async () => {
+    const nextShow = !showDriveBackups;
+    setShowDriveBackups(nextShow);
+    if (nextShow) {
+      let token = accessToken || getCachedAccessToken();
+      if (!token) {
+        try {
+          setIsLoadingBackups(true);
+          const res = await googleSignIn();
+          if (res) {
+            token = res.accessToken;
+            setUser(res.user);
+            setAccessToken(res.accessToken);
+          }
+        } catch (e) {
+          // Handled
+        } finally {
+          setIsLoadingBackups(false);
+        }
+      }
+      if (token) {
+        loadBackups(token);
+      }
+    }
+  };
+
   const handleRestoreDriveFile = async (file: DriveBackupFile) => {
-    if (!accessToken) return;
+    let token = accessToken || getCachedAccessToken();
+    if (!token) {
+      try {
+        const res = await googleSignIn();
+        if (res) {
+          token = res.accessToken;
+          setUser(res.user);
+          setAccessToken(res.accessToken);
+        } else {
+          return;
+        }
+      } catch {
+        return;
+      }
+    }
+
     try {
       setIsLoadingBackups(true);
-      const jsonContent = await downloadGoogleDriveFile(file.id, accessToken);
+      const jsonContent = await downloadGoogleDriveFile(file.id, token);
       const parsedReceipts = parseRestoredBackupJson(jsonContent);
       onReceiptsRestored(
         parsedReceipts,
@@ -485,10 +569,7 @@ export function SettingsDrawer({
 
                             <motion.button
                               whileTap={{ scale: 0.97 }}
-                              onClick={() => {
-                                setShowDriveBackups(!showDriveBackups);
-                                if (!showDriveBackups && accessToken) loadBackups(accessToken);
-                              }}
+                              onClick={handleToggleBackups}
                               className="py-2.5 px-3 rounded-xl bg-m3-surface-container-high hover:bg-m3-surface-container-highest text-m3-on-surface text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer border border-m3-outline-variant/30 transition-all"
                             >
                               <Download className="w-3.5 h-3.5 text-m3-primary" />
@@ -519,16 +600,18 @@ export function SettingsDrawer({
                         <div className="pt-2 space-y-2 border-t border-m3-outline-variant/20">
                           <div className="flex items-center justify-between text-xs font-bold text-m3-on-surface-variant">
                             <span>Cloud Backups in Drive</span>
-                            {accessToken && (
-                              <button
-                                type="button"
-                                onClick={() => loadBackups(accessToken)}
-                                className="text-m3-primary hover:underline flex items-center gap-1 text-[11px]"
-                              >
-                                <RefreshCw className={`w-3 h-3 ${isLoadingBackups ? 'animate-spin' : ''}`} />
-                                <span>Refresh</span>
-                              </button>
-                            )}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const tok = accessToken || getCachedAccessToken();
+                                if (tok) loadBackups(tok);
+                                else handleToggleBackups();
+                              }}
+                              className="text-m3-primary hover:underline flex items-center gap-1 text-[11px]"
+                            >
+                              <RefreshCw className={`w-3 h-3 ${isLoadingBackups ? 'animate-spin' : ''}`} />
+                              <span>Refresh</span>
+                            </button>
                           </div>
 
                           {isLoadingBackups ? (
