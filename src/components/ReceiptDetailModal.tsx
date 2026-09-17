@@ -1,5 +1,5 @@
-import React from 'react';
-import { X, Store, Globe, Calendar, CreditCard, Tag } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Store, Globe, Calendar, CreditCard, Tag, Trash2, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { CostcoReceipt } from '../types';
 import { M3_TRANSITIONS, M3_BOTTOM_SHEET_DRAG } from '../utils/motion';
@@ -9,12 +9,19 @@ interface ReceiptDetailModalProps {
   receipt: CostcoReceipt | null;
   onClose: () => void;
   onSearchItemId: (itemId: string) => void;
+  onDeleteReceipt?: (receiptId: string) => void;
 }
 
-export function ReceiptDetailModal({ receipt, onClose, onSearchItemId }: ReceiptDetailModalProps) {
+export function ReceiptDetailModal({ receipt, onClose, onSearchItemId, onDeleteReceipt }: ReceiptDetailModalProps) {
   const isOnline = receipt?.orderType === 'Online';
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const { onPointerDown: onTagPointerDown, renderRipples: renderTagRipples } = M3Ripple({ color: 'bg-m3-primary/20' });
   const { onPointerDown: onClosePointerDown, renderRipples: renderCloseRipples } = M3Ripple({ color: 'bg-white/20' });
+
+  // Reset confirmation state whenever a receipt is opened or changed
+  useEffect(() => {
+    setConfirmDelete(false);
+  }, [receipt?.id]);
 
   return (
     <AnimatePresence>
@@ -72,16 +79,29 @@ export function ReceiptDetailModal({ receipt, onClose, onSearchItemId }: Receipt
                   </h2>
                 </div>
               </div>
-              <motion.button
-                whileTap={{ scale: 0.9 }}
-                onPointerDown={onClosePointerDown}
-                onClick={onClose}
-                className="relative overflow-hidden w-9 h-9 rounded-full flex items-center justify-center text-m3-on-primary/80 hover:text-m3-on-primary hover:bg-m3-on-primary/10 transition-colors cursor-pointer"
-                aria-label="Close receipt details"
-              >
-                {renderCloseRipples()}
-                <X className="w-5 h-5" />
-              </motion.button>
+              <div className="flex items-center gap-1">
+                {onDeleteReceipt && (
+                  <motion.button
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => setConfirmDelete((prev) => !prev)}
+                    className="w-9 h-9 rounded-full flex items-center justify-center text-m3-on-primary/80 hover:text-white hover:bg-m3-on-primary/20 transition-colors cursor-pointer"
+                    title="Delete this receipt"
+                    aria-label="Delete this receipt"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </motion.button>
+                )}
+                <motion.button
+                  whileTap={{ scale: 0.9 }}
+                  onPointerDown={onClosePointerDown}
+                  onClick={onClose}
+                  className="relative overflow-hidden w-9 h-9 rounded-full flex items-center justify-center text-m3-on-primary/80 hover:text-m3-on-primary hover:bg-m3-on-primary/10 transition-colors cursor-pointer"
+                  aria-label="Close receipt details"
+                >
+                  {renderCloseRipples()}
+                  <X className="w-5 h-5" />
+                </motion.button>
+              </div>
             </div>
 
             {/* Receipt Metadata Info Bar */}
@@ -201,14 +221,63 @@ export function ReceiptDetailModal({ receipt, onClose, onSearchItemId }: Receipt
             </div>
 
             {/* Modal Footer */}
-            <div className="px-6 py-3.5 border-t border-m3-outline-variant/40 bg-m3-surface-container-high flex items-center justify-end text-xs">
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                onClick={onClose}
-                className="px-5 py-2 rounded-full bg-m3-surface-container-highest hover:bg-m3-surface-container-high font-semibold text-m3-on-surface transition-colors cursor-pointer border border-m3-outline-variant/30"
-              >
-                Close
-              </motion.button>
+            <div className="px-4 sm:px-6 py-3.5 border-t border-m3-outline-variant/40 bg-m3-surface-container-high text-xs">
+              {confirmDelete ? (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-m3-error-container/20 border border-m3-error/30 p-3 rounded-2xl"
+                >
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-m3-error shrink-0" />
+                    <span className="text-xs text-m3-on-surface font-medium">
+                      Delete receipt <strong>#{receipt.orderNumber}</strong> ({receipt.items.length} item{receipt.items.length === 1 ? '' : 's'})?
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-end gap-2 shrink-0">
+                    <motion.button
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => setConfirmDelete(false)}
+                      className="px-3.5 py-1.5 rounded-full bg-m3-surface-container hover:bg-m3-surface-container-highest text-m3-on-surface font-semibold text-xs transition-colors cursor-pointer border border-m3-outline-variant/30"
+                    >
+                      Cancel
+                    </motion.button>
+                    <motion.button
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => {
+                        onDeleteReceipt?.(receipt.id);
+                        onClose();
+                      }}
+                      className="px-4 py-1.5 rounded-full bg-m3-error text-m3-on-error hover:bg-m3-error/90 font-semibold text-xs transition-colors cursor-pointer shadow-xs flex items-center gap-1.5"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Yes, Delete</span>
+                    </motion.button>
+                  </div>
+                </motion.div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  {onDeleteReceipt ? (
+                    <motion.button
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => setConfirmDelete(true)}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold text-m3-error hover:bg-m3-error-container/25 transition-colors cursor-pointer border border-m3-error/20"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Delete Receipt</span>
+                    </motion.button>
+                  ) : (
+                    <div />
+                  )}
+                  <motion.button
+                    whileTap={{ scale: 0.95 }}
+                    onClick={onClose}
+                    className="px-5 py-2 rounded-full bg-m3-surface-container-highest hover:bg-m3-surface-container-high font-semibold text-m3-on-surface transition-colors cursor-pointer border border-m3-outline-variant/30"
+                  >
+                    Close
+                  </motion.button>
+                </div>
+              )}
             </div>
           </motion.div>
         </motion.div>

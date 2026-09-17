@@ -138,6 +138,15 @@ export function SettingsDrawer({
   // Initialize Auth state
   useEffect(() => {
     if (!isOpen) return;
+
+    if (isGoogleDriveConnected()) {
+      const saved = getSavedDriveUser();
+      if (saved) {
+        setUser(saved);
+        setAccessToken(getCachedAccessToken());
+      }
+    }
+
     const unsubscribe = initAuth(
       (u, token) => {
         setUser(u);
@@ -152,7 +161,30 @@ export function SettingsDrawer({
         }
       }
     );
-    return () => unsubscribe();
+
+    const handleConnected = () => {
+      const saved = getSavedDriveUser();
+      if (saved) {
+        setUser(saved);
+        setAccessToken(getCachedAccessToken());
+      }
+    };
+
+    const handleDisconnected = () => {
+      setUser(null);
+      setAccessToken(null);
+      setDriveBackups([]);
+      setShowDriveBackups(false);
+    };
+
+    window.addEventListener('reco-gdrive-connected', handleConnected);
+    window.addEventListener('reco-gdrive-disconnected', handleDisconnected);
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener('reco-gdrive-connected', handleConnected);
+      window.removeEventListener('reco-gdrive-disconnected', handleDisconnected);
+    };
   }, [isOpen]);
 
   // Load drive backups list if authenticated and tab opened

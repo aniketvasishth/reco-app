@@ -108,8 +108,19 @@ export function SaveBackupModal({
     title: string;
   } | null>(null);
 
-  // Track Auth state
+  // Track Auth state and retain status across opens & reloads
   useEffect(() => {
+    // Re-check and hydrate connection state whenever modal opens
+    if (isOpen) {
+      if (isGoogleDriveConnected()) {
+        const saved = getSavedDriveUser();
+        if (saved) {
+          setUser(saved);
+          setAccessToken(getCachedAccessToken());
+        }
+      }
+    }
+
     const unsubscribe = initAuth(
       (authedUser, token) => {
         setUser(authedUser);
@@ -124,8 +135,29 @@ export function SaveBackupModal({
         }
       }
     );
-    return () => unsubscribe();
-  }, []);
+
+    const handleConnected = () => {
+      const saved = getSavedDriveUser();
+      if (saved) {
+        setUser(saved);
+        setAccessToken(getCachedAccessToken());
+      }
+    };
+
+    const handleDisconnected = () => {
+      setUser(null);
+      setAccessToken(null);
+    };
+
+    window.addEventListener('reco-gdrive-connected', handleConnected);
+    window.addEventListener('reco-gdrive-disconnected', handleDisconnected);
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener('reco-gdrive-connected', handleConnected);
+      window.removeEventListener('reco-gdrive-disconnected', handleDisconnected);
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 

@@ -501,6 +501,32 @@ export default function App() {
     showSnackbar('All receipts cleared from this device', 'Cleanup Successful');
   };
 
+  // Delete individual receipt from device
+  const handleDeleteReceipt = (receiptId: string) => {
+    const targetReceipt = receipts.find((r) => r.id === receiptId);
+    if (!targetReceipt) return;
+
+    setReceipts((prev) => {
+      const updated = prev.filter((r) => r.id !== receiptId);
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      } catch (e) {
+        console.warn('Failed to update localStorage after receipt deletion:', e);
+      }
+      return updated;
+    });
+
+    if (selectedReceiptId === receiptId) {
+      setSelectedReceiptId(null);
+    }
+
+    showSnackbar(
+      `Receipt #${targetReceipt.orderNumber} (${targetReceipt.items.length} item${targetReceipt.items.length === 1 ? '' : 's'}) deleted`,
+      'Receipt Removed',
+      'info'
+    );
+  };
+
   // Direct camera capture on homescreen
   const handleDirectCameraCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1036,6 +1062,7 @@ export default function App() {
         }}
         onOpenSaveBackup={() => setIsSaveBackupOpen(true)}
         onClearAllReceipts={handleClearAllReceipts}
+        onDeleteReceipt={handleDeleteReceipt}
         onOpenInstall={openPromptManually}
         isInstalled={isInstalled}
         onLoadDemo={handleLoadDemoData}
@@ -1092,6 +1119,7 @@ export default function App() {
         onSearchItemId={(itemId) => {
           setSearchQuery(itemId);
         }}
+        onDeleteReceipt={handleDeleteReceipt}
       />
 
       {/* How To & Chrome Extension Guide Modal */}

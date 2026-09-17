@@ -6,6 +6,8 @@ import {
   onAuthStateChanged,
   User,
   signOut,
+  setPersistence,
+  browserLocalPersistence,
 } from 'firebase/auth';
 import firebaseConfig from '../../firebase-applet-config.json';
 import { CostcoReceipt } from '../types';
@@ -16,6 +18,11 @@ export const SCOPES = ['https://www.googleapis.com/auth/drive.file'];
 
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 export const auth = getAuth(app);
+
+// Attempt to configure local persistence so auth state survives reloads
+try {
+  setPersistence(auth, browserLocalPersistence).catch(() => {});
+} catch {}
 
 const provider = new GoogleAuthProvider();
 provider.addScope('https://www.googleapis.com/auth/drive.file');
@@ -83,6 +90,10 @@ export function saveDriveConnection(user: User | DriveConnectedUser, accessToken
       const expiresAt = Date.now() + 3500 * 1000;
       localStorage.setItem(RECO_GDRIVE_TOKEN_EXPIRY_KEY, String(expiresAt));
     }
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('reco-gdrive-connected', { detail: userInfo }));
+    }
   } catch (e) {
     console.warn('Failed to save Drive connection info to localStorage', e);
   }
@@ -98,6 +109,10 @@ export function clearDriveConnection() {
     localStorage.removeItem(RECO_GDRIVE_ACCESS_TOKEN_KEY);
     localStorage.removeItem(RECO_GDRIVE_TOKEN_EXPIRY_KEY);
     localStorage.removeItem(RECO_GDRIVE_USER_INFO_KEY);
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('reco-gdrive-disconnected'));
+    }
   } catch {}
 }
 

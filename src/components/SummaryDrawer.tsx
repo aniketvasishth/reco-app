@@ -39,6 +39,7 @@ interface SummaryDrawerProps {
   onOpenFeedback?: () => void;
   onOpenSaveBackup?: () => void;
   onClearAllReceipts?: () => void;
+  onDeleteReceipt?: (receiptId: string) => void;
   onOpenInstall?: () => void;
   isInstalled?: boolean;
   onLoadDemo?: () => void;
@@ -61,6 +62,7 @@ export function SummaryDrawer({
   onOpenFeedback,
   onOpenSaveBackup,
   onClearAllReceipts,
+  onDeleteReceipt,
   onOpenInstall,
   isInstalled,
   onLoadDemo,
@@ -74,6 +76,10 @@ export function SummaryDrawer({
   const [activeTab, setActiveTab] = useState<SummaryTab>('overview');
   const [direction, setDirection] = useState<number>(1);
   const prevTabRef = useRef<SummaryTab>('overview');
+
+  // In-app deletion confirmation states (replaces window.confirm for iframe & mobile reliability)
+  const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
+  const [receiptToDelete, setReceiptToDelete] = useState<CostcoReceipt | null>(null);
 
   const tabOrder: SummaryTab[] = ['overview', 'channels', 'categories', 'cards'];
 
@@ -554,13 +560,13 @@ export function SummaryDrawer({
                         </h3>
                         {receipts.length > 0 && onClearAllReceipts && (
                           <button
-                            onClick={() => {
-                              if (window.confirm('Are you sure you want to clear all receipts from this device?')) {
-                                onClearAllReceipts();
-                                onClose();
-                              }
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShowClearAllConfirm(true);
                             }}
-                            className="text-[11px] text-m3-error dark:text-[#ffb4ab] hover:underline flex items-center gap-1 font-semibold cursor-pointer"
+                            className="text-[11px] text-m3-error dark:text-[#ffb4ab] hover:underline flex items-center gap-1 font-semibold cursor-pointer py-1 px-1.5 rounded-lg active:bg-m3-error-container/20 transition-colors"
+                            title="Clear all stored receipts"
                           >
                             <Trash2 className="w-3 h-3" />
                             <span>Clear</span>
@@ -619,7 +625,7 @@ export function SummaryDrawer({
                                     {r.orderDate} • {r.items.length} items
                                   </span>
                                 </div>
-                                <div className="flex items-center gap-1.5 shrink-0 pl-2">
+                                <div className="flex items-center gap-2 shrink-0 pl-2">
                                   <span
                                     className={`font-bold font-mono ${
                                       isRet ? 'text-m3-error dark:text-[#ffb4ab]' : 'text-m3-on-surface'
@@ -629,6 +635,20 @@ export function SummaryDrawer({
                                       ? `-$${Math.abs(r.total).toFixed(2)}`
                                       : `$${r.total.toFixed(2)}`}
                                   </span>
+                                  {onDeleteReceipt && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setReceiptToDelete(r);
+                                      }}
+                                      title="Delete this receipt"
+                                      aria-label={`Delete receipt #${r.orderNumber}`}
+                                      className="p-2 -mr-1 rounded-full text-m3-on-surface-variant/70 hover:text-m3-error hover:bg-m3-error-container/25 active:bg-m3-error-container/40 transition-colors cursor-pointer shrink-0"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  )}
                                   <ChevronRight className="w-4 h-4 text-m3-on-surface-variant" />
                                 </div>
                               </motion.div>
@@ -849,6 +869,115 @@ export function SummaryDrawer({
               )}
             </div>
           </motion.div>
+
+          {/* Confirm Clear All Receipts Modal */}
+          {showClearAllConfirm && (
+            <div
+              className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-in fade-in duration-150"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowClearAllConfirm(false);
+              }}
+            >
+              <motion.div
+                initial={{ scale: 0.92, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.92, opacity: 0 }}
+                onClick={(e) => e.stopPropagation()}
+                className="bg-m3-surface-container rounded-3xl p-6 max-w-sm w-full border border-m3-outline-variant/40 shadow-2xl space-y-4 text-center"
+              >
+                <div className="w-12 h-12 rounded-full bg-m3-error-container/40 text-m3-error flex items-center justify-center mx-auto">
+                  <Trash2 className="w-6 h-6" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-base font-bold text-m3-on-surface">Clear All Receipts?</h3>
+                  <p className="text-xs text-m3-on-surface-variant leading-relaxed">
+                    This will permanently delete all {receipts.length} stored receipts and their items from your local database. You can restore from a backup or reload sample data at any time.
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowClearAllConfirm(false)}
+                    className="py-2.5 rounded-xl bg-m3-surface-container-high text-m3-on-surface text-xs font-semibold hover:bg-m3-surface-container-highest transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowClearAllConfirm(false);
+                      onClearAllReceipts?.();
+                      onClose();
+                    }}
+                    className="py-2.5 rounded-xl bg-m3-error text-m3-on-error text-xs font-bold hover:bg-m3-error/90 transition-colors cursor-pointer shadow-xs"
+                  >
+                    Yes, Clear All
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+
+          {/* Confirm Delete Individual Receipt Modal */}
+          {receiptToDelete && (
+            <div
+              className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-in fade-in duration-150"
+              onClick={(e) => {
+                e.stopPropagation();
+                setReceiptToDelete(null);
+              }}
+            >
+              <motion.div
+                initial={{ scale: 0.92, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.92, opacity: 0 }}
+                onClick={(e) => e.stopPropagation()}
+                className="bg-m3-surface-container rounded-3xl p-6 max-w-sm w-full border border-m3-outline-variant/40 shadow-2xl space-y-4 text-center"
+              >
+                <div className="w-12 h-12 rounded-full bg-m3-error-container/40 text-m3-error flex items-center justify-center mx-auto">
+                  <Trash2 className="w-6 h-6" />
+                </div>
+                <div className="space-y-1.5">
+                  <h3 className="text-base font-bold text-m3-on-surface font-mono">
+                    Delete Receipt #{receiptToDelete.orderNumber}?
+                  </h3>
+                  <p className="text-xs text-m3-on-surface-variant leading-relaxed">
+                    Remove this {receiptToDelete.orderType === 'Online' ? 'Costco.com order' : 'Costco Warehouse receipt'} from {receiptToDelete.orderDate}?
+                  </p>
+                  <div className="p-2.5 rounded-xl bg-m3-surface-container-high border border-m3-outline-variant/30 text-xs flex items-center justify-between text-m3-on-surface font-semibold">
+                    <span>{receiptToDelete.items.length} item{receiptToDelete.items.length === 1 ? '' : 's'}</span>
+                    <span className="font-mono text-m3-primary">
+                      {receiptToDelete.total < 0
+                        ? `-$${Math.abs(receiptToDelete.total).toFixed(2)}`
+                        : `$${receiptToDelete.total.toFixed(2)}`}
+                    </span>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setReceiptToDelete(null)}
+                    className="py-2.5 rounded-xl bg-m3-surface-container-high text-m3-on-surface text-xs font-semibold hover:bg-m3-surface-container-highest transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (onDeleteReceipt && receiptToDelete) {
+                        onDeleteReceipt(receiptToDelete.id);
+                      }
+                      setReceiptToDelete(null);
+                    }}
+                    className="py-2.5 rounded-xl bg-m3-error text-m3-on-error text-xs font-bold hover:bg-m3-error/90 transition-colors cursor-pointer shadow-xs"
+                  >
+                    Yes, Delete
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
         </motion.div>
       )}
     </AnimatePresence>
