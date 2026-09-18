@@ -32,10 +32,12 @@ app.get('/api/health', (_req, res) => {
   });
 });
 
-// Gemini AI Vision Receipt Parser Endpoint (supports blurry, low-light, and multi-section long receipts)
+// Gemini AI Vision Receipt Parser Endpoint (supports personal BYOK key; developer billing protected)
 app.post('/api/gemini/parse-receipt', async (req, res) => {
   try {
     const { imageBase64, mimeType, fileName, images } = req.body;
+    const userApiKey = (req.headers['x-gemini-api-key'] as string) || req.body.userApiKey;
+
     if (!imageBase64 && (!images || !Array.isArray(images) || images.length === 0)) {
       return res.status(400).json({ error: 'imageBase64 or images payload is required' });
     }
@@ -45,6 +47,7 @@ app.post('/api/gemini/parse-receipt', async (req, res) => {
       mimeType,
       fileName,
       images,
+      userApiKey,
     });
 
     if (
@@ -96,5 +99,8 @@ async function startServer() {
   });
 }
 
-startServer();
+startServer().catch((err) => {
+  console.error('Failed to start server:', err);
+  process.exit(1);
+});
 

@@ -8,8 +8,8 @@
   "display": "standalone",
   "display_override": ["standalone", "window-controls-overlay", "minimal-ui"],
   "orientation": "portrait",
-  "background_color": "#221016",
-  "theme_color": "#221016",
+  "background_color": "#10131a",
+  "theme_color": "#10131a",
   "categories": ["shopping", "productivity", "utilities", "finance"],
   "icons": [
     {
@@ -36,5 +36,13 @@
       "type": "image/png",
       "purpose": "maskable any"
     }
-  ]
+  ],
+  "related_applications": [
+    {
+      "platform": "webapp",
+      "url": "/manifest-dark.json",
+      "id": "com.reco.app"
+    }
+  ],
+  "prefer_related_applications": false
 }

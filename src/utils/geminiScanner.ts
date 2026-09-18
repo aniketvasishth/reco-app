@@ -2,6 +2,7 @@ import { CostcoReceipt, CostcoItem } from '../types';
 import { resolveCostcoItemDetails } from './costcoCatalog';
 import { ParsedAiReceiptResult } from '../../server/geminiParser';
 import { isPdfFile, renderPdfToImage } from './pdfReceiptHelper';
+import { getUserGeminiKey, isOfflineOnly } from '../services/onDeviceAiService';
 
 /**
  * Optimizes large phone photos (e.g. 48MP raw) by capping the maximum dimension
@@ -269,15 +270,24 @@ export async function parseReceiptWithAi(
   file: File,
   onProgress?: (status: string, percent: number) => void
 ): Promise<CostcoReceipt> {
+  if (isOfflineOnly()) {
+    throw new Error(
+      'Offline Only mode is enabled. All external network requests to Gemini cloud services are disabled.'
+    );
+  }
+
   onProgress?.('Preparing image for Gemini AI analysis...', 15);
   const { imageBase64, mimeType } = await prepareImageForAi(file);
 
   onProgress?.('Gemini AI Vision analyzing receipt & reconstructing blurred text...', 45);
 
+  const userKey = getUserGeminiKey();
+
   const response = await fetch('/api/gemini/parse-receipt', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      ...(userKey ? { 'x-gemini-api-key': userKey } : {}),
     },
     body: JSON.stringify({
       imageBase64,
@@ -327,6 +337,12 @@ export async function parseMultiSectionReceiptWithAi(
   files: File[],
   onProgress?: (status: string, percent: number) => void
 ): Promise<CostcoReceipt> {
+  if (isOfflineOnly()) {
+    throw new Error(
+      'Offline Only mode is enabled. All external network requests to Gemini cloud services are disabled.'
+    );
+  }
+
   if (!files || files.length === 0) {
     throw new Error('No receipt photos provided for long receipt scan.');
   }
@@ -350,10 +366,13 @@ export async function parseMultiSectionReceiptWithAi(
 
   onProgress?.(`Gemini AI Vision stitching ${files.length} sections & deduplicating seams...`, 50);
 
+  const userKey = getUserGeminiKey();
+
   const response = await fetch('/api/gemini/parse-receipt', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      ...(userKey ? { 'x-gemini-api-key': userKey } : {}),
     },
     body: JSON.stringify({
       images: imagePayloads,

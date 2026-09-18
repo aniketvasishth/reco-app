@@ -291,6 +291,8 @@ export function SummaryDrawer({
           transition={{ duration: 0.25 }}
           className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex flex-col justify-end sm:justify-center items-center p-0 sm:p-4 md:p-6"
           onClick={onClose}
+          onTouchStart={(e) => e.stopPropagation()}
+          onTouchEnd={(e) => e.stopPropagation()}
         >
           <motion.div
             ref={drawerRef}
@@ -311,6 +313,8 @@ export function SummaryDrawer({
               }
             }}
             onClick={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
+            onTouchEnd={(e) => e.stopPropagation()}
             className="w-full max-w-lg md:max-w-xl bg-m3-surface-container text-m3-on-surface max-h-[88vh] sm:max-h-[90vh] rounded-t-[28px] sm:rounded-[28px] shadow-2xl flex flex-col overflow-hidden border border-m3-outline-variant/60 touch-pan-y"
           >
             {/* Mobile Drag Handle Bar */}
@@ -532,23 +536,43 @@ export function SummaryDrawer({
                       </div>
                       
                       <div className="grid grid-cols-2 gap-3 pt-1 text-xs">
-                        <div className="bg-m3-surface-container p-2.5 rounded-xl border border-m3-outline-variant/30 shadow-2xs">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (onSearchItemId && firstPurchaseDate) {
+                              onSearchItemId(firstPurchaseDate);
+                              onClose();
+                            }
+                          }}
+                          title={`Search purchases from ${formatDateLabel(firstPurchaseDate)}`}
+                          className="bg-m3-surface-container p-2.5 rounded-xl border border-m3-outline-variant/30 shadow-2xs text-left cursor-pointer hover:bg-m3-surface-container-high transition-colors"
+                        >
                           <span className="text-[10px] uppercase font-bold text-m3-on-surface-variant block">
                             First Purchase
                           </span>
                           <span className="text-xs sm:text-sm font-semibold text-m3-on-surface block mt-0.5">
                             {formatDateLabel(firstPurchaseDate)}
                           </span>
-                        </div>
+                        </button>
 
-                        <div className="bg-m3-surface-container p-2.5 rounded-xl border border-m3-outline-variant/30 shadow-2xs">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (onSearchItemId && latestPurchaseDate) {
+                              onSearchItemId(latestPurchaseDate);
+                              onClose();
+                            }
+                          }}
+                          title={`Search purchases from ${formatDateLabel(latestPurchaseDate)}`}
+                          className="bg-m3-surface-container p-2.5 rounded-xl border border-m3-outline-variant/30 shadow-2xs text-left cursor-pointer hover:bg-m3-surface-container-high transition-colors"
+                        >
                           <span className="text-[10px] uppercase font-bold text-m3-on-surface-variant block">
                             Latest Purchase
                           </span>
                           <span className="text-xs sm:text-sm font-semibold text-m3-on-surface block mt-0.5">
                             {formatDateLabel(latestPurchaseDate)}
                           </span>
-                        </div>
+                        </button>
                       </div>
                     </div>
 
@@ -671,7 +695,17 @@ export function SummaryDrawer({
                     className="space-y-4"
                   >
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="bg-m3-surface-container-low border border-m3-outline-variant/40 rounded-2xl p-4 space-y-1.5 shadow-xs">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (onSearchItemId) {
+                            onSearchItemId('Warehouse');
+                            onClose();
+                          }
+                        }}
+                        title="Filter warehouse purchases"
+                        className="bg-m3-surface-container-low border border-m3-outline-variant/40 rounded-2xl p-4 space-y-1.5 shadow-xs text-left cursor-pointer hover:bg-m3-surface-container transition-colors"
+                      >
                         <div className="flex items-center gap-1.5 text-xs font-semibold text-m3-primary">
                           <Store className="w-4 h-4" />
                           <span>Warehouse</span>
@@ -682,9 +716,19 @@ export function SummaryDrawer({
                         <div className="text-xs text-m3-on-surface-variant">
                           {warehouseItems.length} items ({totalCostcoSpend > 0 ? Math.round((warehouseSpend / totalCostcoSpend) * 100) : 0}%)
                         </div>
-                      </div>
+                      </button>
 
-                      <div className="bg-m3-surface-container-low border border-m3-outline-variant/40 rounded-2xl p-4 space-y-1.5 shadow-xs">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (onSearchItemId) {
+                            onSearchItemId('Costco.com');
+                            onClose();
+                          }
+                        }}
+                        title="Filter online purchases"
+                        className="bg-m3-surface-container-low border border-m3-outline-variant/40 rounded-2xl p-4 space-y-1.5 shadow-xs text-left cursor-pointer hover:bg-m3-surface-container transition-colors"
+                      >
                         <div className="flex items-center gap-1.5 text-xs font-semibold text-m3-tertiary">
                           <Globe className="w-4 h-4" />
                           <span>Costco Online</span>
@@ -695,7 +739,7 @@ export function SummaryDrawer({
                         <div className="text-xs text-m3-on-surface-variant">
                           {onlineItems.length} items ({totalCostcoSpend > 0 ? Math.round((onlineSpend / totalCostcoSpend) * 100) : 0}%)
                         </div>
-                      </div>
+                      </button>
                     </div>
 
                     {/* Channel comparison progress bar */}
@@ -751,7 +795,18 @@ export function SummaryDrawer({
                         {sortedCategories.map(([cat, data]) => {
                           const pct = totalCostcoSpend > 0 ? (data.spend / totalCostcoSpend) * 100 : 0;
                           return (
-                            <div key={cat} className="space-y-1.5 text-xs">
+                            <button
+                              type="button"
+                              key={cat}
+                              onClick={() => {
+                                if (onSearchItemId) {
+                                  onSearchItemId(cat);
+                                  onClose();
+                                }
+                              }}
+                              title={`Filter items in ${cat}`}
+                              className="w-full text-left space-y-1.5 text-xs p-1.5 -mx-1.5 rounded-xl hover:bg-m3-surface-container transition-colors cursor-pointer"
+                            >
                               <div className="flex justify-between text-m3-on-surface">
                                 <span className="font-semibold truncate max-w-[220px]">{cat}</span>
                                 <div className="text-right">
@@ -769,7 +824,7 @@ export function SummaryDrawer({
                                   className="bg-m3-primary h-full rounded-full"
                                 />
                               </div>
-                            </div>
+                            </button>
                           );
                         })}
                       </div>
@@ -797,9 +852,20 @@ export function SummaryDrawer({
                         <h3 className="text-xs font-bold uppercase tracking-wider text-m3-on-surface-variant">
                           Payment Cards
                         </h3>
-                        <div className="bg-m3-surface-container-low border border-m3-outline-variant/40 rounded-2xl divide-y divide-m3-outline-variant/30">
+                        <div className="bg-m3-surface-container-low border border-m3-outline-variant/40 rounded-2xl divide-y divide-m3-outline-variant/30 overflow-hidden">
                           {sortedCards.map(([card, data]) => (
-                            <div key={card} className="p-3.5 flex items-center justify-between gap-3 text-xs">
+                            <button
+                              type="button"
+                              key={card}
+                              onClick={() => {
+                                if (onSearchItemId) {
+                                  onSearchItemId(card);
+                                  onClose();
+                                }
+                              }}
+                              title={`Filter items paid with ${card}`}
+                              className="w-full p-3.5 flex items-center justify-between gap-3 text-xs text-left cursor-pointer hover:bg-m3-surface-container transition-colors"
+                            >
                               <div className="flex items-center gap-2.5 min-w-0">
                                 <div className="w-7 h-7 rounded-lg bg-amber-500/15 flex items-center justify-center shrink-0">
                                   <CreditCard className="w-3.5 h-3.5 text-amber-500 shrink-0" />
@@ -816,7 +882,7 @@ export function SummaryDrawer({
                                   {data.count} purchases
                                 </span>
                               </div>
-                            </div>
+                            </button>
                           ))}
                         </div>
                       </div>
@@ -828,9 +894,20 @@ export function SummaryDrawer({
                         <h3 className="text-xs font-bold uppercase tracking-wider text-m3-on-surface-variant">
                           Spending by Year
                         </h3>
-                        <div className="bg-m3-surface-container-low border border-m3-outline-variant/40 rounded-2xl divide-y divide-m3-outline-variant/30">
+                        <div className="bg-m3-surface-container-low border border-m3-outline-variant/40 rounded-2xl divide-y divide-m3-outline-variant/30 overflow-hidden">
                           {sortedYears.map(([yr, data]) => (
-                            <div key={yr} className="p-3.5 flex items-center justify-between text-xs">
+                            <button
+                              type="button"
+                              key={yr}
+                              onClick={() => {
+                                if (onSearchItemId) {
+                                  onSearchItemId(yr);
+                                  onClose();
+                                }
+                              }}
+                              title={`Filter purchases from year ${yr}`}
+                              className="w-full p-3.5 flex items-center justify-between text-xs text-left cursor-pointer hover:bg-m3-surface-container transition-colors"
+                            >
                               <div className="flex items-center gap-2">
                                 <Calendar className="w-3.5 h-3.5 text-m3-on-surface-variant" />
                                 <span className="font-semibold text-m3-on-surface">{yr}</span>
@@ -843,7 +920,7 @@ export function SummaryDrawer({
                                   {data.count} items
                                 </span>
                               </div>
-                            </div>
+                            </button>
                           ))}
                         </div>
                       </div>

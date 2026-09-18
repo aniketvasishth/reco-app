@@ -34,6 +34,8 @@ export function ReceiptDetailModal({ receipt, onClose, onSearchItemId, onDeleteR
           transition={{ duration: 0.25 }}
           className="fixed inset-0 z-60 flex flex-col justify-end sm:justify-center items-center p-0 sm:p-4 bg-black/60 backdrop-blur-xs"
           onClick={onClose}
+          onTouchStart={(e) => e.stopPropagation()}
+          onTouchEnd={(e) => e.stopPropagation()}
         >
           <motion.div
             layoutId={`receipt-container-${receipt.orderNumber}`}
@@ -54,6 +56,8 @@ export function ReceiptDetailModal({ receipt, onClose, onSearchItemId, onDeleteR
             }}
             className="bg-m3-surface-container text-m3-on-surface w-full max-w-xl rounded-t-[28px] sm:rounded-[28px] shadow-2xl border border-m3-outline-variant/60 overflow-hidden flex flex-col max-h-[88vh] sm:max-h-[90vh] touch-pan-y"
             onClick={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
+            onTouchEnd={(e) => e.stopPropagation()}
           >
             {/* Mobile Drag Handle Bar */}
             <div className="pt-2 pb-1 bg-m3-primary flex justify-center sm:hidden cursor-grab active:cursor-grabbing">
@@ -106,34 +110,62 @@ export function ReceiptDetailModal({ receipt, onClose, onSearchItemId, onDeleteR
 
             {/* Receipt Metadata Info Bar */}
             <div className="bg-m3-surface-container-high border-b border-m3-outline-variant/40 px-6 py-3.5 grid grid-cols-2 gap-3 text-xs">
-              <div>
+              <button
+                type="button"
+                onClick={() => {
+                  onSearchItemId(receipt.orderDate);
+                  onClose();
+                }}
+                title={`Filter all items bought on ${receipt.orderDate}`}
+                className="text-left group cursor-pointer p-1.5 -m-1.5 rounded-xl hover:bg-m3-surface-container transition-colors"
+              >
                 <span className="text-[10px] text-m3-on-surface-variant font-bold uppercase tracking-wider block">
                   Transaction Date
                 </span>
-                <span className="font-semibold text-m3-on-surface flex items-center gap-1.5 mt-0.5">
+                <span className="font-semibold text-m3-on-surface flex items-center gap-1.5 mt-0.5 group-hover:text-m3-primary transition-colors">
                   <Calendar className="w-3.5 h-3.5 text-m3-primary" />
                   {receipt.orderDate}
                 </span>
-              </div>
+              </button>
 
-              <div>
+              <button
+                type="button"
+                onClick={() => {
+                  if (receipt.paymentCard) {
+                    onSearchItemId(receipt.paymentCard);
+                    onClose();
+                  }
+                }}
+                title={`Filter items paid with ${receipt.paymentCard || 'this card'}`}
+                className="text-left group cursor-pointer p-1.5 -m-1.5 rounded-xl hover:bg-m3-surface-container transition-colors"
+              >
                 <span className="text-[10px] text-m3-on-surface-variant font-bold uppercase tracking-wider block">
                   Payment Card
                 </span>
-                <span className="font-semibold text-m3-on-surface flex items-center gap-1.5 mt-0.5 truncate">
+                <span className="font-semibold text-m3-on-surface flex items-center gap-1.5 mt-0.5 truncate group-hover:text-amber-500 transition-colors">
                   <CreditCard className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                   <span className="truncate">{receipt.paymentCard || 'Costco Anywhere Visa'}</span>
                 </span>
-              </div>
+              </button>
 
-              <div className="col-span-2">
+              <button
+                type="button"
+                onClick={() => {
+                  if (receipt.warehouseLocation) {
+                    onSearchItemId(receipt.warehouseLocation);
+                    onClose();
+                  }
+                }}
+                title={`Filter items from ${receipt.warehouseLocation}`}
+                className="col-span-2 text-left group cursor-pointer p-1.5 -m-1.5 rounded-xl hover:bg-m3-surface-container transition-colors"
+              >
                 <span className="text-[10px] text-m3-on-surface-variant font-bold uppercase tracking-wider block">
                   Warehouse / Fulfillment
                 </span>
-                <span className="font-semibold text-m3-on-surface block mt-0.5 truncate">
+                <span className="font-semibold text-m3-on-surface block mt-0.5 truncate group-hover:text-m3-primary transition-colors">
                   {receipt.warehouseLocation}
                 </span>
-              </div>
+              </button>
             </div>
 
             {/* Receipt Line Items */}

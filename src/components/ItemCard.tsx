@@ -24,6 +24,7 @@ interface ItemCardProps {
   allPurchases?: CostcoItem[];
   onViewReceipt: (orderId: string) => void;
   onReEnrich: (itemId: string, rawName: string) => void;
+  onSearchKeyword?: (keyword: string) => void;
   isEnriching?: boolean;
 }
 
@@ -31,12 +32,17 @@ export function ItemCard({
   item,
   onViewReceipt,
   onReEnrich,
+  onSearchKeyword,
   isEnriching,
 }: ItemCardProps) {
   const [copied, setCopied] = useState(false);
   const { onPointerDown: onTagDown, renderRipples: renderTagRipples } = M3Ripple({ color: 'bg-m3-primary/20' });
   const { onPointerDown: onReceiptDown, renderRipples: renderReceiptRipples } = M3Ripple({ color: 'bg-m3-primary/20' });
   const { onPointerDown: onEnrichDown, renderRipples: renderEnrichRipples } = M3Ripple({ color: 'bg-current' });
+  const { onPointerDown: onDateDown, renderRipples: renderDateRipples } = M3Ripple({ color: 'bg-m3-primary/20' });
+  const { onPointerDown: onPaidDown, renderRipples: renderPaidRipples } = M3Ripple({ color: 'bg-emerald-500/20' });
+  const { onPointerDown: onStoreDown, renderRipples: renderStoreRipples } = M3Ripple({ color: 'bg-m3-primary/20' });
+  const { onPointerDown: onCardDown, renderRipples: renderCardRipples } = M3Ripple({ color: 'bg-amber-500/20' });
 
   const copyItemId = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -125,34 +131,66 @@ export function ItemCard({
             </motion.button>
 
             {item.category && (
-              <span className={`inline-block px-2.5 py-0.5 rounded-md text-[11px] font-medium border ${
-                isReturn
-                  ? 'bg-m3-error-container/30 text-m3-error dark:text-[#ffb4ab] border-m3-error/20'
-                  : 'bg-m3-surface-container text-m3-on-surface-variant border-m3-outline-variant/40'
-              }`}>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (onSearchKeyword && item.category) onSearchKeyword(item.category);
+                }}
+                title={`Filter items by category: ${item.category}`}
+                className={`inline-block px-2.5 py-0.5 rounded-md text-[11px] font-medium border cursor-pointer hover:opacity-85 transition-opacity ${
+                  isReturn
+                    ? 'bg-m3-error-container/30 text-m3-error dark:text-[#ffb4ab] border-m3-error/20'
+                    : 'bg-m3-surface-container text-m3-on-surface-variant border-m3-outline-variant/40'
+                }`}
+              >
                 {item.category}
-              </span>
+              </button>
             )}
           </div>
 
           {/* Return Badge OR Warehouse vs Online purchase tag */}
           <div className="shrink-0 flex items-center gap-1.5">
             {isReturn && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-m3-error-container text-m3-on-error-container border border-m3-error/30 shadow-2xs">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onViewReceipt(item.orderId);
+                }}
+                title="View return receipt"
+                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-m3-error-container text-m3-on-error-container border border-m3-error/30 shadow-2xs cursor-pointer hover:opacity-90"
+              >
                 <RotateCcw className="w-3 h-3 text-m3-error dark:text-[#ffb4ab]" />
                 Return
-              </span>
+              </button>
             )}
             {isOnline ? (
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-m3-surface-container text-m3-on-surface-variant border border-m3-outline-variant/50">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (onSearchKeyword) onSearchKeyword('Costco.com');
+                }}
+                title="Filter online purchases"
+                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-m3-surface-container text-m3-on-surface-variant border border-m3-outline-variant/50 cursor-pointer hover:bg-m3-surface-container-high transition-colors"
+              >
                 <Globe className="w-3 h-3 text-m3-tertiary" />
                 Online
-              </span>
+              </button>
             ) : (
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-m3-surface-container text-m3-on-surface-variant border border-m3-outline-variant/50">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (onSearchKeyword && item.warehouseLocation) onSearchKeyword(item.warehouseLocation);
+                }}
+                title={`Filter items from ${item.warehouseLocation || 'Warehouse'}`}
+                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-m3-surface-container text-m3-on-surface-variant border border-m3-outline-variant/50 cursor-pointer hover:bg-m3-surface-container-high transition-colors"
+              >
                 <Store className="w-3 h-3 text-m3-primary" />
                 Warehouse
-              </span>
+              </button>
             )}
           </div>
         </div>
@@ -169,7 +207,19 @@ export function ItemCard({
         {/* Brand & Package Specs */}
         {(item.brand || item.packageDetails) && (
           <div className="flex items-center gap-2 mt-1 text-xs text-m3-on-surface-variant">
-            {item.brand && <span className="font-semibold text-m3-on-surface">{item.brand}</span>}
+            {item.brand && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (onSearchKeyword && item.brand) onSearchKeyword(item.brand);
+                }}
+                title={`Filter items by brand: ${item.brand}`}
+                className="font-semibold text-m3-on-surface hover:underline cursor-pointer"
+              >
+                {item.brand}
+              </button>
+            )}
             {item.brand && item.packageDetails && <span className="opacity-40">•</span>}
             {item.packageDetails && <span>{item.packageDetails}</span>}
           </div>
@@ -194,15 +244,26 @@ export function ItemCard({
         )}
       </div>
 
-      {/* Primary Purchase Details: When, Amount, Location, Card */}
+      {/* Primary Purchase Details: When, Amount, Location, Card (All Interactive Chips) */}
       <div className={`mt-3 pt-3 border-t grid grid-cols-2 gap-2 text-xs ${
         isReturn ? 'border-m3-error/20' : 'border-m3-outline-variant/40'
       }`}>
         
-        {/* WHEN WAS IT BOUGHT */}
-        <div className={`flex items-center gap-2 p-2 rounded-xl ${
-          isReturn ? 'bg-m3-error-container/20' : 'bg-m3-surface-container-low dark:bg-m3-surface-container'
-        }`}>
+        {/* WHEN WAS IT BOUGHT - Opens Receipt */}
+        <motion.button
+          type="button"
+          whileTap={{ scale: 0.96 }}
+          onPointerDown={onDateDown}
+          onClick={(e) => {
+            e.stopPropagation();
+            onViewReceipt(item.orderId);
+          }}
+          title="View receipt for this purchase date"
+          className={`relative overflow-hidden flex items-center gap-2 p-2 rounded-xl text-left cursor-pointer transition-all hover:ring-1 hover:ring-m3-primary/30 ${
+            isReturn ? 'bg-m3-error-container/20' : 'bg-m3-surface-container-low dark:bg-m3-surface-container'
+          }`}
+        >
+          {renderDateRipples()}
           <Calendar className="w-3.5 h-3.5 text-m3-primary shrink-0" />
           <div className="truncate">
             <span className="text-[10px] uppercase font-bold text-m3-on-surface-variant block tracking-wider">
@@ -212,12 +273,23 @@ export function ItemCard({
               {formatDate(item.orderDate)}
             </span>
           </div>
-        </div>
+        </motion.button>
 
-        {/* HOW MUCH WAS PAID / REFUNDED */}
-        <div className={`flex items-center gap-2 p-2 rounded-xl ${
-          isReturn ? 'bg-m3-error-container/30' : 'bg-m3-surface-container-low dark:bg-m3-surface-container'
-        }`}>
+        {/* HOW MUCH WAS PAID / REFUNDED - Opens Receipt */}
+        <motion.button
+          type="button"
+          whileTap={{ scale: 0.96 }}
+          onPointerDown={onPaidDown}
+          onClick={(e) => {
+            e.stopPropagation();
+            onViewReceipt(item.orderId);
+          }}
+          title="View receipt breakdown for this amount"
+          className={`relative overflow-hidden flex items-center gap-2 p-2 rounded-xl text-left cursor-pointer transition-all hover:ring-1 hover:ring-emerald-500/30 ${
+            isReturn ? 'bg-m3-error-container/30' : 'bg-m3-surface-container-low dark:bg-m3-surface-container'
+          }`}
+        >
+          {renderPaidRipples()}
           {isReturn ? (
             <RotateCcw className="w-3.5 h-3.5 text-m3-error dark:text-[#ffb4ab] shrink-0" />
           ) : (
@@ -240,10 +312,25 @@ export function ItemCard({
               )}
             </div>
           </div>
-        </div>
+        </motion.button>
 
-        {/* WHERE */}
-        <div className="flex items-center gap-2 bg-m3-surface-container-low dark:bg-m3-surface-container p-2 rounded-xl">
+        {/* WHERE - Filters by Location */}
+        <motion.button
+          type="button"
+          whileTap={{ scale: 0.96 }}
+          onPointerDown={onStoreDown}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (onSearchKeyword) {
+              onSearchKeyword(item.warehouseLocation || (isOnline ? 'Costco.com' : 'Costco Warehouse'));
+            } else {
+              onViewReceipt(item.orderId);
+            }
+          }}
+          title={`Filter items from ${item.warehouseLocation || 'this location'}`}
+          className="relative overflow-hidden flex items-center gap-2 bg-m3-surface-container-low dark:bg-m3-surface-container p-2 rounded-xl text-left cursor-pointer transition-all hover:ring-1 hover:ring-m3-primary/30"
+        >
+          {renderStoreRipples()}
           {isOnline ? (
             <Globe className="w-3.5 h-3.5 text-m3-tertiary shrink-0" />
           ) : (
@@ -257,10 +344,25 @@ export function ItemCard({
               {item.warehouseLocation || (isOnline ? 'Costco.com' : 'Warehouse')}
             </span>
           </div>
-        </div>
+        </motion.button>
 
-        {/* PAYMENT CARD USED */}
-        <div className="flex items-center gap-2 bg-m3-surface-container-low dark:bg-m3-surface-container p-2 rounded-xl">
+        {/* PAYMENT CARD USED - Filters by Card */}
+        <motion.button
+          type="button"
+          whileTap={{ scale: 0.96 }}
+          onPointerDown={onCardDown}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (onSearchKeyword && item.paymentCard) {
+              onSearchKeyword(item.paymentCard);
+            } else {
+              onViewReceipt(item.orderId);
+            }
+          }}
+          title={`Filter items paid with ${item.paymentCard || 'this card'}`}
+          className="relative overflow-hidden flex items-center gap-2 bg-m3-surface-container-low dark:bg-m3-surface-container p-2 rounded-xl text-left cursor-pointer transition-all hover:ring-1 hover:ring-amber-500/30"
+        >
+          {renderCardRipples()}
           <CreditCard className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400 shrink-0" />
           <div className="truncate">
             <span className="text-[10px] uppercase font-bold text-m3-on-surface-variant block tracking-wider">
@@ -270,7 +372,7 @@ export function ItemCard({
               {item.paymentCard || 'Costco Anywhere Visa'}
             </span>
           </div>
-        </div>
+        </motion.button>
       </div>
 
       {/* Card Footer */}

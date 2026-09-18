@@ -240,4 +240,12 @@ body::-webkit-scrollbar,
   padding-top: 0px !important;
 }
 
+/* Restrict pinch-to-zoom across touch, mobile devices, and trackpads */
+html,
+body,
+#root {
+  touch-action: pan-x pan-y;
+  -webkit-text-size-adjust: 100%;
+}
+
 

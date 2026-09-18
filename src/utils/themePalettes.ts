@@ -42,15 +42,506 @@ export interface MaterialPalette {
   name: string;
   subtitle: string;
   dualTone: [string, string]; // [Dark shade, Accent shade] for Pixel chip preview
+  isDynamic?: boolean;
   dark: ColorTokens;
   light: ColorTokens;
 }
 
+// Color conversion helpers
+export function hexToRgb(hex: string): [number, number, number] {
+  let clean = hex.replace('#', '');
+  if (clean.length === 3) {
+    clean = clean.split('').map((c) => c + c).join('');
+  }
+  const num = parseInt(clean, 16);
+  return [(num >> 16) & 255, (num >> 8) & 255, num & 255];
+}
+
+export function rgbToHex(r: number, g: number, b: number): string {
+  const clamp = (v: number) => Math.max(0, Math.min(255, Math.round(v)));
+  return '#' + [clamp(r), clamp(g), clamp(b)].map((x) => x.toString(16).padStart(2, '0')).join('');
+}
+
+export function rgbToHsl(r: number, g: number, b: number): [number, number, number] {
+  const rNorm = r / 255;
+  const gNorm = g / 255;
+  const bNorm = b / 255;
+  const max = Math.max(rNorm, gNorm, bNorm);
+  const min = Math.min(rNorm, gNorm, bNorm);
+  let h = 0;
+  let s = 0;
+  const l = (max + min) / 2;
+
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case rNorm:
+        h = (gNorm - bNorm) / d + (gNorm < bNorm ? 6 : 0);
+        break;
+      case gNorm:
+        h = (bNorm - rNorm) / d + 2;
+        break;
+      case bNorm:
+        h = (rNorm - gNorm) / d + 4;
+        break;
+    }
+    h /= 6;
+  }
+  return [h * 360, s, l];
+}
+
+export function hslToRgb(h: number, s: number, l: number): [number, number, number] {
+  h = ((h % 360) + 360) % 360;
+  s = Math.max(0, Math.min(1, s));
+  l = Math.max(0, Math.min(1, l));
+
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+  const m = l - c / 2;
+  let r1 = 0, g1 = 0, b1 = 0;
+
+  if (h >= 0 && h < 60) {
+    r1 = c; g1 = x; b1 = 0;
+  } else if (h >= 60 && h < 120) {
+    r1 = x; g1 = c; b1 = 0;
+  } else if (h >= 120 && h < 180) {
+    r1 = 0; g1 = c; b1 = x;
+  } else if (h >= 180 && h < 240) {
+    r1 = 0; g1 = x; b1 = c;
+  } else if (h >= 240 && h < 300) {
+    r1 = x; g1 = 0; b1 = c;
+  } else {
+    r1 = c; g1 = 0; b1 = x;
+  }
+
+  return [
+    Math.round((r1 + m) * 255),
+    Math.round((g1 + m) * 255),
+    Math.round((b1 + m) * 255),
+  ];
+}
+
+export function hslToHex(h: number, s: number, l: number): string {
+  const [r, g, b] = hslToRgb(h, s, l);
+  return rgbToHex(r, g, b);
+}
+
+/**
+ * Mathematically generates a compliant Material 3 (Monet) Light & Dark palette
+ * from any seed Accent Color (RGB / Hex).
+ */
+export function generateMaterial3Palette(
+  seedHexOrRgb: string,
+  id: string,
+  name: string,
+  subtitle: string,
+  dualTone?: [string, string]
+): MaterialPalette {
+  let r = 72, g = 93, b = 142; // Default Pixel Slate Blue
+  if (seedHexOrRgb.startsWith('#')) {
+    [r, g, b] = hexToRgb(seedHexOrRgb);
+  } else if (seedHexOrRgb.startsWith('rgb')) {
+    const match = seedHexOrRgb.match(/\d+/g);
+    if (match && match.length >= 3) {
+      [r, g, b] = match.map(Number);
+    }
+  }
+
+  const [h, s] = rgbToHsl(r, g, b);
+  const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
+
+  const previewDark = dualTone ? dualTone[0] : hslToHex(h, clamp(s * 0.5, 0.2, 0.4), 0.24);
+  const previewAccent = dualTone ? dualTone[1] : hslToHex(h, clamp(s * 0.9, 0.4, 0.8), 0.82);
+
+  return {
+    id,
+    name,
+    subtitle,
+    dualTone: [previewDark, previewAccent],
+    light: {
+      primary: hslToHex(h, clamp(s, 0.35, 0.65), 0.38),
+      onPrimary: '#ffffff',
+      primaryContainer: hslToHex(h, clamp(s * 0.75, 0.25, 0.55), 0.90),
+      onPrimaryContainer: hslToHex(h, clamp(s, 0.4, 0.75), 0.10),
+
+      secondary: hslToHex(h, clamp(s * 0.32, 0.12, 0.28), 0.40),
+      onSecondary: '#ffffff',
+      secondaryContainer: hslToHex(h, clamp(s * 0.35, 0.14, 0.32), 0.91),
+      onSecondaryContainer: hslToHex(h, clamp(s * 0.4, 0.15, 0.35), 0.12),
+
+      tertiary: hslToHex((h + 40) % 360, clamp(s * 0.45, 0.15, 0.40), 0.40),
+      onTertiary: '#ffffff',
+      tertiaryContainer: hslToHex((h + 40) % 360, clamp(s * 0.45, 0.15, 0.40), 0.90),
+      onTertiaryContainer: hslToHex((h + 40) % 360, clamp(s * 0.5, 0.2, 0.45), 0.12),
+
+      error: '#ba1a1a',
+      onError: '#ffffff',
+      errorContainer: '#ffdad6',
+      onErrorContainer: '#410002',
+
+      background: hslToHex(h, 0.12, 0.98),
+      onBackground: hslToHex(h, 0.10, 0.11),
+      surface: hslToHex(h, 0.12, 0.98),
+      onSurface: hslToHex(h, 0.10, 0.11),
+      surfaceVariant: hslToHex(h, 0.12, 0.88),
+      onSurfaceVariant: hslToHex(h, 0.08, 0.30),
+
+      surfaceContainerLowest: '#ffffff',
+      surfaceContainerLow: hslToHex(h, 0.12, 0.96),
+      surfaceContainer: hslToHex(h, 0.12, 0.93),
+      surfaceContainerHigh: hslToHex(h, 0.12, 0.90),
+      surfaceContainerHighest: hslToHex(h, 0.12, 0.87),
+      surfaceDim: hslToHex(h, 0.10, 0.86),
+      surfaceBright: hslToHex(h, 0.12, 0.98),
+
+      outline: hslToHex(h, 0.06, 0.48),
+      outlineVariant: hslToHex(h, 0.08, 0.80),
+      inverseSurface: hslToHex(h, 0.10, 0.20),
+      inverseOnSurface: hslToHex(h, 0.10, 0.95),
+      inversePrimary: hslToHex(h, clamp(s * 0.85, 0.45, 0.80), 0.80),
+    },
+    dark: {
+      primary: hslToHex(h, clamp(s * 0.85, 0.45, 0.80), 0.80),
+      onPrimary: hslToHex(h, clamp(s, 0.4, 0.75), 0.20),
+      primaryContainer: hslToHex(h, clamp(s * 0.8, 0.35, 0.65), 0.30),
+      onPrimaryContainer: hslToHex(h, clamp(s * 0.75, 0.25, 0.55), 0.90),
+
+      secondary: hslToHex(h, clamp(s * 0.35, 0.15, 0.35), 0.78),
+      onSecondary: hslToHex(h, clamp(s * 0.4, 0.15, 0.35), 0.22),
+      secondaryContainer: hslToHex(h, clamp(s * 0.35, 0.15, 0.35), 0.30),
+      onSecondaryContainer: hslToHex(h, clamp(s * 0.35, 0.14, 0.32), 0.91),
+
+      tertiary: hslToHex((h + 40) % 360, clamp(s * 0.45, 0.2, 0.45), 0.78),
+      onTertiary: hslToHex((h + 40) % 360, clamp(s * 0.5, 0.2, 0.45), 0.22),
+      tertiaryContainer: hslToHex((h + 40) % 360, clamp(s * 0.45, 0.2, 0.45), 0.30),
+      onTertiaryContainer: hslToHex((h + 40) % 360, clamp(s * 0.45, 0.15, 0.40), 0.90),
+
+      error: '#ffb4ab',
+      onError: '#690005',
+      errorContainer: '#93000a',
+      onErrorContainer: '#ffdad6',
+
+      background: hslToHex(h, 0.16, 0.08),
+      onBackground: hslToHex(h, 0.10, 0.90),
+      surface: hslToHex(h, 0.16, 0.08),
+      onSurface: hslToHex(h, 0.10, 0.90),
+      surfaceVariant: hslToHex(h, 0.12, 0.28),
+      onSurfaceVariant: hslToHex(h, 0.10, 0.78),
+
+      surfaceContainerLowest: hslToHex(h, 0.16, 0.05),
+      surfaceContainerLow: hslToHex(h, 0.16, 0.11),
+      surfaceContainer: hslToHex(h, 0.16, 0.13),
+      surfaceContainerHigh: hslToHex(h, 0.16, 0.17),
+      surfaceContainerHighest: hslToHex(h, 0.16, 0.21),
+      surfaceDim: hslToHex(h, 0.16, 0.08),
+      surfaceBright: hslToHex(h, 0.14, 0.23),
+
+      outline: hslToHex(h, 0.08, 0.55),
+      outlineVariant: hslToHex(h, 0.10, 0.28),
+      inverseSurface: hslToHex(h, 0.10, 0.90),
+      inverseOnSurface: hslToHex(h, 0.10, 0.18),
+      inversePrimary: hslToHex(h, clamp(s, 0.35, 0.65), 0.38),
+    },
+  };
+}
+
+/**
+ * Detects native Android / Chrome Monet Dynamic System Accent via CSS System Colors probe.
+ */
+export function detectAndroidDynamicAccent(): { hex: string; isNative: boolean } {
+  if (typeof document === 'undefined') {
+    return { hex: '#485d8e', isNative: false };
+  }
+  try {
+    const probe = document.createElement('span');
+    probe.style.color = 'AccentColor';
+    probe.style.position = 'absolute';
+    probe.style.opacity = '0';
+    probe.style.pointerEvents = 'none';
+    document.documentElement.appendChild(probe);
+    const computed = window.getComputedStyle(probe).color;
+    document.documentElement.removeChild(probe);
+
+    if (computed && computed.startsWith('rgb')) {
+      const match = computed.match(/\d+/g);
+      if (match && match.length >= 3) {
+        const [r, g, b] = match.map(Number);
+        const hex = rgbToHex(r, g, b);
+        if (hex && hex !== '#0000ee' && hex !== '#000000' && hex !== '#ffffff') {
+          return { hex, isNative: true };
+        }
+      }
+    }
+  } catch {}
+  // Default to Pixel 9 Pro active Slate Blue from Wallpaper & style
+  return { hex: '#485d8e', isNative: false };
+}
+
+/**
+ * Returns dynamic Material 3 palette generated from Android system accent.
+ */
+export function getDynamicSystemPalette(): MaterialPalette {
+  const { hex } = detectAndroidDynamicAccent();
+  const palette = generateMaterial3Palette(
+    hex,
+    'dynamic_system',
+    'Dynamic System (Material You)',
+    'Auto-adapts to your Android Wallpaper & Style',
+    ['#3b4866', '#d8e2ff']
+  );
+  palette.isDynamic = true;
+  return palette;
+}
+
+// 7 Preset Dynamic Swatches exactly matching Android Pixel Wallpaper & style
 export const MATERIAL_PALETTES: MaterialPalette[] = [
+  // 1. DYNAMIC MATERIAL YOU (Default: Auto-samples Android OS & Chrome)
+  {
+    id: 'dynamic_system',
+    name: 'Dynamic Material You',
+    subtitle: 'Auto-adapts to Android Wallpaper & style',
+    dualTone: ['#3b4866', '#d8e2ff'],
+    isDynamic: true,
+    dark: {
+      background: '#10131a',
+      onBackground: '#e0e2ec',
+      surface: '#10131a',
+      onSurface: '#e0e2ec',
+      surfaceVariant: '#434751',
+      onSurfaceVariant: '#c3c6d2',
+      surfaceContainerLowest: '#0b0e14',
+      surfaceContainerLow: '#181b22',
+      surfaceContainer: '#1c2027',
+      surfaceContainerHigh: '#272a31',
+      surfaceContainerHighest: '#32353c',
+      surfaceDim: '#10131a',
+      surfaceBright: '#363941',
+      primary: '#b0c6ff',
+      onPrimary: '#142f60',
+      primaryContainer: '#2e4577',
+      onPrimaryContainer: '#d8e2ff',
+      secondary: '#bec6dc',
+      onSecondary: '#283042',
+      secondaryContainer: '#3e4759',
+      onSecondaryContainer: '#dae2f9',
+      tertiary: '#debcdf',
+      onTertiary: '#402843',
+      tertiaryContainer: '#583e5b',
+      onTertiaryContainer: '#fad8fb',
+      error: '#ffb4ab',
+      onError: '#690005',
+      errorContainer: '#93000a',
+      onErrorContainer: '#ffdad6',
+      outline: '#8d919c',
+      outlineVariant: '#434751',
+      inverseSurface: '#e0e2ec',
+      inverseOnSurface: '#2d3037',
+      inversePrimary: '#475d92',
+    },
+    light: {
+      background: '#f8f9ff',
+      onBackground: '#181c22',
+      surface: '#f8f9ff',
+      onSurface: '#181c22',
+      surfaceVariant: '#dfe2ee',
+      onSurfaceVariant: '#434751',
+      surfaceContainerLowest: '#ffffff',
+      surfaceContainerLow: '#f2f3fc',
+      surfaceContainer: '#edf0fa',
+      surfaceContainerHigh: '#e7eaf4',
+      surfaceContainerHighest: '#e1e4ee',
+      surfaceDim: '#d9dce5',
+      surfaceBright: '#f8f9ff',
+      primary: '#475d92',
+      onPrimary: '#ffffff',
+      primaryContainer: '#d8e2ff',
+      onPrimaryContainer: '#001a43',
+      secondary: '#565f71',
+      onSecondary: '#ffffff',
+      secondaryContainer: '#dae2f9',
+      onSecondaryContainer: '#131c2c',
+      tertiary: '#705574',
+      onTertiary: '#ffffff',
+      tertiaryContainer: '#fad8fb',
+      onTertiaryContainer: '#29132d',
+      error: '#ba1a1a',
+      onError: '#ffffff',
+      errorContainer: '#ffdad6',
+      onErrorContainer: '#410002',
+      outline: '#747782',
+      outlineVariant: '#c3c6d2',
+      inverseSurface: '#2d3037',
+      inverseOnSurface: '#eff0f9',
+      inversePrimary: '#b0c6ff',
+    },
+  },
+
+  // 2. Pixel Swatch 4: Slate Blue & Lavender (User's active Wallpaper & style selection)
+  {
+    id: 'pixel_slate_blue',
+    name: 'Slate Blue & Lavender',
+    subtitle: 'Pixel 9 Pro Wallpaper Colors',
+    dualTone: ['#3b4866', '#d8e2ff'],
+    dark: {
+      background: '#10131a',
+      onBackground: '#e0e2ec',
+      surface: '#10131a',
+      onSurface: '#e0e2ec',
+      surfaceVariant: '#434751',
+      onSurfaceVariant: '#c3c6d2',
+      surfaceContainerLowest: '#0b0e14',
+      surfaceContainerLow: '#181b22',
+      surfaceContainer: '#1c2027',
+      surfaceContainerHigh: '#272a31',
+      surfaceContainerHighest: '#32353c',
+      surfaceDim: '#10131a',
+      surfaceBright: '#363941',
+      primary: '#b0c6ff',
+      onPrimary: '#142f60',
+      primaryContainer: '#2e4577',
+      onPrimaryContainer: '#d8e2ff',
+      secondary: '#bec6dc',
+      onSecondary: '#283042',
+      secondaryContainer: '#3e4759',
+      onSecondaryContainer: '#dae2f9',
+      tertiary: '#debcdf',
+      onTertiary: '#402843',
+      tertiaryContainer: '#583e5b',
+      onTertiaryContainer: '#fad8fb',
+      error: '#ffb4ab',
+      onError: '#690005',
+      errorContainer: '#93000a',
+      onErrorContainer: '#ffdad6',
+      outline: '#8d919c',
+      outlineVariant: '#434751',
+      inverseSurface: '#e0e2ec',
+      inverseOnSurface: '#2d3037',
+      inversePrimary: '#475d92',
+    },
+    light: {
+      background: '#f8f9ff',
+      onBackground: '#181c22',
+      surface: '#f8f9ff',
+      onSurface: '#181c22',
+      surfaceVariant: '#dfe2ee',
+      onSurfaceVariant: '#434751',
+      surfaceContainerLowest: '#ffffff',
+      surfaceContainerLow: '#f2f3fc',
+      surfaceContainer: '#edf0fa',
+      surfaceContainerHigh: '#e7eaf4',
+      surfaceContainerHighest: '#e1e4ee',
+      surfaceDim: '#d9dce5',
+      surfaceBright: '#f8f9ff',
+      primary: '#475d92',
+      onPrimary: '#ffffff',
+      primaryContainer: '#d8e2ff',
+      onPrimaryContainer: '#001a43',
+      secondary: '#565f71',
+      onSecondary: '#ffffff',
+      secondaryContainer: '#dae2f9',
+      onSecondaryContainer: '#131c2c',
+      tertiary: '#705574',
+      onTertiary: '#ffffff',
+      tertiaryContainer: '#fad8fb',
+      onTertiaryContainer: '#29132d',
+      error: '#ba1a1a',
+      onError: '#ffffff',
+      errorContainer: '#ffdad6',
+      onErrorContainer: '#410002',
+      outline: '#747782',
+      outlineVariant: '#c3c6d2',
+      inverseSurface: '#2d3037',
+      inverseOnSurface: '#eff0f9',
+      inversePrimary: '#b0c6ff',
+    },
+  },
+
+  // 3. Pixel Swatch 1: Taupe & Muted Plum
+  {
+    id: 'plum_taupe',
+    name: 'Plum & Taupe',
+    subtitle: 'Subtle earthy warmth',
+    dualTone: ['#4a3e3d', '#e8dcdb'],
+    dark: {
+      background: '#161212',
+      onBackground: '#e7e0df',
+      surface: '#161212',
+      onSurface: '#e7e0df',
+      surfaceVariant: '#4c4544',
+      onSurfaceVariant: '#cfc4c3',
+      surfaceContainerLowest: '#100d0d',
+      surfaceContainerLow: '#1e1919',
+      surfaceContainer: '#221d1d',
+      surfaceContainerHigh: '#2d2727',
+      surfaceContainerHighest: '#383232',
+      surfaceDim: '#161212',
+      surfaceBright: '#3d3737',
+      primary: '#e4bdba',
+      onPrimary: '#432928',
+      primaryContainer: '#5b3f3e',
+      onPrimaryContainer: '#ffdada',
+      secondary: '#d6c2c0',
+      onSecondary: '#3a2d2c',
+      secondaryContainer: '#524342',
+      onSecondaryContainer: '#f3dedd',
+      tertiary: '#d9c4a4',
+      onTertiary: '#3c2f18',
+      tertiaryContainer: '#54452c',
+      onTertiaryContainer: '#f6e0c0',
+      error: '#ffb4ab',
+      onError: '#690005',
+      errorContainer: '#93000a',
+      onErrorContainer: '#ffdad6',
+      outline: '#988e8d',
+      outlineVariant: '#4c4544',
+      inverseSurface: '#e7e0df',
+      inverseOnSurface: '#332e2e',
+      inversePrimary: '#765655',
+    },
+    light: {
+      background: '#fff8f7',
+      onBackground: '#201a19',
+      surface: '#fff8f7',
+      onSurface: '#201a19',
+      surfaceVariant: '#ebdcdb',
+      onSurfaceVariant: '#4c4544',
+      surfaceContainerLowest: '#ffffff',
+      surfaceContainerLow: '#fbf1f0',
+      surfaceContainer: '#f5ebea',
+      surfaceContainerHigh: '#efe5e4',
+      surfaceContainerHighest: '#e9dfde',
+      surfaceDim: '#e1d7d6',
+      surfaceBright: '#fff8f7',
+      primary: '#765655',
+      onPrimary: '#ffffff',
+      primaryContainer: '#ffdada',
+      onPrimaryContainer: '#2c1514',
+      secondary: '#6a5a58',
+      onSecondary: '#ffffff',
+      secondaryContainer: '#f3dedd',
+      onSecondaryContainer: '#241817',
+      tertiary: '#6c5c42',
+      onTertiary: '#ffffff',
+      tertiaryContainer: '#f6e0c0',
+      onTertiaryContainer: '#251a06',
+      error: '#ba1a1a',
+      onError: '#ffffff',
+      errorContainer: '#ffdad6',
+      onErrorContainer: '#410002',
+      outline: '#7f7473',
+      outlineVariant: '#cfc4c3',
+      inverseSurface: '#362f2e',
+      inverseOnSurface: '#f9eee9',
+      inversePrimary: '#e4bdba',
+    },
+  },
+
+  // 4. Pixel Swatch 2: Crimson & Rose Pink
   {
     id: 'burgundy_rose',
-    name: 'Burgundy & Rose',
-    subtitle: 'Matches your active Wallpaper Colors',
+    name: 'Crimson & Rose',
+    subtitle: 'Barca Crimson tone',
     dualTone: ['#461523', '#f3b4c6'],
     dark: {
       background: '#221016',
@@ -125,11 +616,13 @@ export const MATERIAL_PALETTES: MaterialPalette[] = [
       inversePrimary: '#f3b4c6',
     },
   },
+
+  // 5. Pixel Swatch 3: Terracotta & Cyan
   {
     id: 'peach_teal',
-    name: 'Peach & Teal',
-    subtitle: 'Warm sunset & cool contrast',
-    dualTone: ['#763420', '#63dac5'],
+    name: 'Terracotta & Cyan',
+    subtitle: 'Warm sunset & cool teal contrast',
+    dualTone: ['#6b3a2a', '#a0eff0'],
     dark: {
       background: '#1d120f',
       onBackground: '#f0dfdc',
@@ -203,87 +696,251 @@ export const MATERIAL_PALETTES: MaterialPalette[] = [
       inversePrimary: '#ffb59f',
     },
   },
+
+  // 6. Pixel Swatch 5: Charcoal & Cool Lavender
   {
-    id: 'ice_blue',
-    name: 'Ice Blue & Lavender',
-    subtitle: 'Cool crisp Nordic tones',
-    dualTone: ['#183a54', '#b5c8e8'],
+    id: 'charcoal_lavender',
+    name: 'Charcoal & Lavender',
+    subtitle: 'Muted modern contrast',
+    dualTone: ['#3c3f4a', '#e0e1f0'],
     dark: {
-      background: '#101418',
-      onBackground: '#e0e2e8',
-      surface: '#101418',
-      onSurface: '#e0e2e8',
-      surfaceVariant: '#41474d',
-      onSurfaceVariant: '#c1c7ce',
-      surfaceContainerLowest: '#0b0e12',
-      surfaceContainerLow: '#181c20',
-      surfaceContainer: '#1c2024',
-      surfaceContainerHigh: '#272a2f',
-      surfaceContainerHighest: '#31353a',
-      surfaceDim: '#101418',
-      surfaceBright: '#363a3f',
-      primary: '#97cbff',
-      onPrimary: '#003353',
-      primaryContainer: '#004a75',
-      onPrimaryContainer: '#cfe5ff',
-      secondary: '#b9c8da',
-      onSecondary: '#233240',
-      secondaryContainer: '#3a4857',
-      onSecondaryContainer: '#d5e4f6',
-      tertiary: '#d4bfe7',
-      onTertiary: '#392a4a',
-      tertiaryContainer: '#514062',
-      onTertiaryContainer: '#efdbff',
+      background: '#121318',
+      onBackground: '#e2e2e8',
+      surface: '#121318',
+      onSurface: '#e2e2e8',
+      surfaceVariant: '#44464f',
+      onSurfaceVariant: '#c4c6d0',
+      surfaceContainerLowest: '#0d0e12',
+      surfaceContainerLow: '#191b20',
+      surfaceContainer: '#1d1f24',
+      surfaceContainerHigh: '#28292f',
+      surfaceContainerHighest: '#33343a',
+      surfaceDim: '#121318',
+      surfaceBright: '#393940',
+      primary: '#bfc6dc',
+      onPrimary: '#283042',
+      primaryContainer: '#3f4759',
+      onPrimaryContainer: '#dbe2f9',
+      secondary: '#c6c5d0',
+      onSecondary: '#2f3038',
+      secondaryContainer: '#45464f',
+      onSecondaryContainer: '#e2e1ec',
+      tertiary: '#e0bbdd',
+      onTertiary: '#412742',
+      tertiaryContainer: '#593d59',
+      onTertiaryContainer: '#fcd7f9',
       error: '#ffb4ab',
       onError: '#690005',
       errorContainer: '#93000a',
       onErrorContainer: '#ffdad6',
-      outline: '#8b9198',
-      outlineVariant: '#41474d',
-      inverseSurface: '#e0e2e8',
-      inverseOnSurface: '#2d3135',
-      inversePrimary: '#006399',
+      outline: '#8e909a',
+      outlineVariant: '#44464f',
+      inverseSurface: '#e2e2e8',
+      inverseOnSurface: '#2f3036',
+      inversePrimary: '#575f71',
     },
     light: {
-      background: '#f7f9ff',
-      onBackground: '#181c20',
-      surface: '#f7f9ff',
-      onSurface: '#181c20',
-      surfaceVariant: '#dde3ea',
-      onSurfaceVariant: '#41474d',
+      background: '#f9f9ff',
+      onBackground: '#1a1b20',
+      surface: '#f9f9ff',
+      onSurface: '#1a1b20',
+      surfaceVariant: '#e1e2ec',
+      onSurfaceVariant: '#44464f',
       surfaceContainerLowest: '#ffffff',
-      surfaceContainerLow: '#f1f4fa',
-      surfaceContainer: '#ebedf4',
-      surfaceContainerHigh: '#e5e8ee',
-      surfaceContainerHighest: '#dfe2e8',
-      surfaceDim: '#d8dae0',
-      surfaceBright: '#f7f9ff',
-      primary: '#006399',
+      surfaceContainerLow: '#f3f3fb',
+      surfaceContainer: '#edecf5',
+      surfaceContainerHigh: '#e7e7ef',
+      surfaceContainerHighest: '#e1e1e9',
+      surfaceDim: '#dad9e2',
+      surfaceBright: '#f9f9ff',
+      primary: '#575f71',
       onPrimary: '#ffffff',
-      primaryContainer: '#cfe5ff',
-      onPrimaryContainer: '#001d32',
-      secondary: '#51606f',
+      primaryContainer: '#dbe2f9',
+      onPrimaryContainer: '#131c2b',
+      secondary: '#5d5d67',
       onSecondary: '#ffffff',
-      secondaryContainer: '#d5e4f6',
-      onSecondaryContainer: '#0e1d2a',
-      tertiary: '#69587b',
+      secondaryContainer: '#e2e1ec',
+      onSecondaryContainer: '#1a1b23',
+      tertiary: '#725572',
       onTertiary: '#ffffff',
-      tertiaryContainer: '#efdbff',
-      onTertiaryContainer: '#241534',
+      tertiaryContainer: '#fcd7f9',
+      onTertiaryContainer: '#2a132c',
       error: '#ba1a1a',
       onError: '#ffffff',
       errorContainer: '#ffdad6',
       onErrorContainer: '#410002',
-      outline: '#71787e',
-      outlineVariant: '#c1c7ce',
-      inverseSurface: '#2d3135',
-      inverseOnSurface: '#eff1f7',
-      inversePrimary: '#97cbff',
+      outline: '#757780',
+      outlineVariant: '#c4c6d0',
+      inverseSurface: '#2f3036',
+      inverseOnSurface: '#f1f0f7',
+      inversePrimary: '#bfc6dc',
     },
   },
+
+  // 7. Pixel Swatch 6: Royal Blue & Magenta
+  {
+    id: 'royal_blue_magenta',
+    name: 'Royal Blue & Magenta',
+    subtitle: 'Vibrant punchy dual-tone',
+    dualTone: ['#1a4488', '#ffb0cd'],
+    dark: {
+      background: '#0e1420',
+      onBackground: '#dee3f2',
+      surface: '#0e1420',
+      onSurface: '#dee3f2',
+      surfaceVariant: '#414755',
+      onSurfaceVariant: '#c1c7d6',
+      surfaceContainerLowest: '#090e18',
+      surfaceContainerLow: '#151c28',
+      surfaceContainer: '#19202d',
+      surfaceContainerHigh: '#242b38',
+      surfaceContainerHighest: '#2f3643',
+      surfaceDim: '#0e1420',
+      surfaceBright: '#353c4a',
+      primary: '#a6c8ff',
+      onPrimary: '#003060',
+      primaryContainer: '#004787',
+      onPrimaryContainer: '#d5e3ff',
+      secondary: '#ffb0cd',
+      onSecondary: '#5c1137',
+      secondaryContainer: '#792a50',
+      onSecondaryContainer: '#ffd8e4',
+      tertiary: '#dec48c',
+      onTertiary: '#3e2e04',
+      tertiaryContainer: '#564419',
+      onTertiaryContainer: '#fbe0a6',
+      error: '#ffb4ab',
+      onError: '#690005',
+      errorContainer: '#93000a',
+      onErrorContainer: '#ffdad6',
+      outline: '#8b91a0',
+      outlineVariant: '#414755',
+      inverseSurface: '#dee3f2',
+      inverseOnSurface: '#2b313c',
+      inversePrimary: '#005faf',
+    },
+    light: {
+      background: '#f8f9ff',
+      onBackground: '#171c24',
+      surface: '#f8f9ff',
+      onSurface: '#171c24',
+      surfaceVariant: '#dee3f2',
+      onSurfaceVariant: '#414755',
+      surfaceContainerLowest: '#ffffff',
+      surfaceContainerLow: '#f0f3ff',
+      surfaceContainer: '#eaeffc',
+      surfaceContainerHigh: '#e4e9f6',
+      surfaceContainerHighest: '#dee3f0',
+      surfaceDim: '#d6dbe7',
+      surfaceBright: '#f8f9ff',
+      primary: '#005faf',
+      onPrimary: '#ffffff',
+      primaryContainer: '#d5e3ff',
+      onPrimaryContainer: '#001b3b',
+      secondary: '#984068',
+      onSecondary: '#ffffff',
+      secondaryContainer: '#ffd8e4',
+      onSecondaryContainer: '#3b0021',
+      tertiary: '#705c2e',
+      onTertiary: '#ffffff',
+      tertiaryContainer: '#fbe0a6',
+      onTertiaryContainer: '#261a00',
+      error: '#ba1a1a',
+      onError: '#ffffff',
+      errorContainer: '#ffdad6',
+      onErrorContainer: '#410002',
+      outline: '#727785',
+      outlineVariant: '#c1c7d6',
+      inverseSurface: '#2b313c',
+      inverseOnSurface: '#eff1fc',
+      inversePrimary: '#a6c8ff',
+    },
+  },
+
+  // 8. Pixel Swatch 7: Cobalt & Emerald Teal
+  {
+    id: 'cobalt_emerald',
+    name: 'Cobalt & Emerald',
+    subtitle: 'High energy sports contrast',
+    dualTone: ['#184b80', '#7ce5c4'],
+    dark: {
+      background: '#0d141e',
+      onBackground: '#dde3ef',
+      surface: '#0d141e',
+      onSurface: '#dde3ef',
+      surfaceVariant: '#414852',
+      onSurfaceVariant: '#c1c7d2',
+      surfaceContainerLowest: '#080f18',
+      surfaceContainerLow: '#141c26',
+      surfaceContainer: '#18202a',
+      surfaceContainerHigh: '#232b35',
+      surfaceContainerHighest: '#2d3540',
+      surfaceDim: '#0d141e',
+      surfaceBright: '#343b47',
+      primary: '#a2c9ff',
+      onPrimary: '#00315c',
+      primaryContainer: '#004780',
+      onPrimaryContainer: '#d3e4ff',
+      secondary: '#5bdbb9',
+      onSecondary: '#00382b',
+      secondaryContainer: '#00513f',
+      onSecondaryContainer: '#7bf8d4',
+      tertiary: '#dec48c',
+      onTertiary: '#3e2e04',
+      tertiaryContainer: '#564419',
+      onTertiaryContainer: '#fbe0a6',
+      error: '#ffb4ab',
+      onError: '#690005',
+      errorContainer: '#93000a',
+      onErrorContainer: '#ffdad6',
+      outline: '#8b929c',
+      outlineVariant: '#414852',
+      inverseSurface: '#dde3ef',
+      inverseOnSurface: '#2a313b',
+      inversePrimary: '#0060a8',
+    },
+    light: {
+      background: '#f7f9ff',
+      onBackground: '#161c24',
+      surface: '#f7f9ff',
+      onSurface: '#161c24',
+      surfaceVariant: '#dde3ef',
+      onSurfaceVariant: '#414852',
+      surfaceContainerLowest: '#ffffff',
+      surfaceContainerLow: '#eff3fe',
+      surfaceContainer: '#e9eef8',
+      surfaceContainerHigh: '#e3e8f2',
+      surfaceContainerHighest: '#dde2ec',
+      surfaceDim: '#d5dae4',
+      surfaceBright: '#f7f9ff',
+      primary: '#0060a8',
+      onPrimary: '#ffffff',
+      primaryContainer: '#d3e4ff',
+      onPrimaryContainer: '#001c38',
+      secondary: '#006c55',
+      onSecondary: '#ffffff',
+      secondaryContainer: '#7bf8d4',
+      onSecondaryContainer: '#002118',
+      tertiary: '#705c2e',
+      onTertiary: '#ffffff',
+      tertiaryContainer: '#fbe0a6',
+      onTertiaryContainer: '#261a00',
+      error: '#ba1a1a',
+      onError: '#ffffff',
+      errorContainer: '#ffdad6',
+      onErrorContainer: '#410002',
+      outline: '#717882',
+      outlineVariant: '#c1c7d2',
+      inverseSurface: '#2a313b',
+      inverseOnSurface: '#eff1fb',
+      inversePrimary: '#a2c9ff',
+    },
+  },
+
+  // 9. Forest Sage
   {
     id: 'forest_sage',
-    name: 'Forest Sage & Mint',
+    name: 'Forest Sage',
     subtitle: 'Natural earthy botanicals',
     dualTone: ['#233827', '#a4d3a2'],
     dark: {
@@ -299,19 +956,19 @@ export const MATERIAL_PALETTES: MaterialPalette[] = [
       surfaceContainerHigh: '#272c28',
       surfaceContainerHighest: '#323733',
       surfaceDim: '#111512',
-      surfaceBright: '#373c38',
-      primary: '#a4d3a2',
-      onPrimary: '#0f3817',
-      primaryContainer: '#28502b',
-      onPrimaryContainer: '#bfeec0',
-      secondary: '#b9ccb6',
-      onSecondary: '#243425',
-      secondaryContainer: '#3a4b3a',
-      onSecondaryContainer: '#d5e8d1',
-      tertiary: '#a2ced9',
-      onTertiary: '#023640',
-      tertiaryContainer: '#214d57',
-      onTertiaryContainer: '#bdeaf5',
+      surfaceBright: '#373d39',
+      primary: '#9ecfa2',
+      onPrimary: '#063917',
+      primaryContainer: '#20502b',
+      onPrimaryContainer: '#b9ebbcd',
+      secondary: '#b9ccb8',
+      onSecondary: '#243427',
+      secondaryContainer: '#3b4b3c',
+      onSecondaryContainer: '#d5e8d4',
+      tertiary: '#a0cfd2',
+      onTertiary: '#00373a',
+      tertiaryContainer: '#1f4e51',
+      onTertiaryContainer: '#bcebee',
       error: '#ffb4ab',
       onError: '#690005',
       errorContainer: '#93000a',
@@ -319,287 +976,58 @@ export const MATERIAL_PALETTES: MaterialPalette[] = [
       outline: '#8c938a',
       outlineVariant: '#424941',
       inverseSurface: '#e1e4de',
-      inverseOnSurface: '#2e312d',
-      inversePrimary: '#3f6841',
+      inverseOnSurface: '#2e312e',
+      inversePrimary: '#376940',
     },
     light: {
       background: '#f7faf4',
-      onBackground: '#191d19',
+      onBackground: '#191d1a',
       surface: '#f7faf4',
-      onSurface: '#191d19',
+      onSurface: '#191d1a',
       surfaceVariant: '#dee5db',
       onSurfaceVariant: '#424941',
       surfaceContainerLowest: '#ffffff',
       surfaceContainerLow: '#f1f5ee',
-      surfaceContainer: '#ebefe9',
-      surfaceContainerHigh: '#e6eae3',
+      surfaceContainer: '#ebefe8',
+      surfaceContainerHigh: '#e6e9e3',
       surfaceContainerHighest: '#e0e4dd',
-      surfaceDim: '#d9ddd6',
+      surfaceDim: '#d8dcd5',
       surfaceBright: '#f7faf4',
-      primary: '#3f6841',
+      primary: '#376940',
       onPrimary: '#ffffff',
-      primaryContainer: '#bfeec0',
-      onPrimaryContainer: '#002107',
-      secondary: '#516351',
+      primaryContainer: '#b9ebbcd',
+      onPrimaryContainer: '#00210b',
+      secondary: '#516353',
       onSecondary: '#ffffff',
-      secondaryContainer: '#d5e8d1',
-      onSecondaryContainer: '#101f11',
-      tertiary: '#39656f',
+      secondaryContainer: '#d5e8d4',
+      onSecondaryContainer: '#101f13',
+      tertiary: '#396568',
       onTertiary: '#ffffff',
-      tertiaryContainer: '#bdeaf5',
-      onTertiaryContainer: '#001f26',
+      tertiaryContainer: '#bcebee',
+      onTertiaryContainer: '#002022',
       error: '#ba1a1a',
       onError: '#ffffff',
       errorContainer: '#ffdad6',
       onErrorContainer: '#410002',
-      outline: '#727971',
+      outline: '#727970',
       outlineVariant: '#c2c9bf',
       inverseSurface: '#2e312e',
       inverseOnSurface: '#eff2ec',
-      inversePrimary: '#a4d3a2',
-    },
-  },
-  {
-    id: 'royal_violet',
-    name: 'Royal Violet & Orchid',
-    subtitle: 'Deep dusk & amethyst tones',
-    dualTone: ['#3b2650', '#d8b9f7'],
-    dark: {
-      background: '#16121b',
-      onBackground: '#e6e0e9',
-      surface: '#16121b',
-      onSurface: '#e6e0e9',
-      surfaceVariant: '#49454f',
-      onSurfaceVariant: '#cbc4cf',
-      surfaceContainerLowest: '#100c15',
-      surfaceContainerLow: '#1e1a23',
-      surfaceContainer: '#221e27',
-      surfaceContainerHigh: '#2d2832',
-      surfaceContainerHighest: '#38333d',
-      surfaceDim: '#16121b',
-      surfaceBright: '#3e3843',
-      primary: '#d8b9f7',
-      onPrimary: '#3c2357',
-      primaryContainer: '#533b6e',
-      onPrimaryContainer: '#eedcff',
-      secondary: '#cec2db',
-      onSecondary: '#352d40',
-      secondaryContainer: '#4c4357',
-      onSecondaryContainer: '#ebdef8',
-      tertiary: '#f1b7c3',
-      onTertiary: '#4a2530',
-      tertiaryContainer: '#633b46',
-      onTertiaryContainer: '#ffd9df',
-      error: '#ffb4ab',
-      onError: '#690005',
-      errorContainer: '#93000a',
-      onErrorContainer: '#ffdad6',
-      outline: '#948f99',
-      outlineVariant: '#49454f',
-      inverseSurface: '#e6e0e9',
-      inverseOnSurface: '#322f36',
-      inversePrimary: '#6c5387',
-    },
-    light: {
-      background: '#fdf7ff',
-      onBackground: '#1d1a22',
-      surface: '#fdf7ff',
-      onSurface: '#1d1a22',
-      surfaceVariant: '#e7e0eb',
-      onSurfaceVariant: '#49454f',
-      surfaceContainerLowest: '#ffffff',
-      surfaceContainerLow: '#f7f1fb',
-      surfaceContainer: '#f1ecf5',
-      surfaceContainerHigh: '#ebe6f0',
-      surfaceContainerHighest: '#e5e0ea',
-      surfaceDim: '#dfdbe4',
-      surfaceBright: '#fdf7ff',
-      primary: '#6c5387',
-      onPrimary: '#ffffff',
-      primaryContainer: '#eedcff',
-      onPrimaryContainer: '#260e40',
-      secondary: '#645b70',
-      onSecondary: '#ffffff',
-      secondaryContainer: '#ebdef8',
-      onSecondaryContainer: '#20182a',
-      tertiary: '#7e525d',
-      onTertiary: '#ffffff',
-      tertiaryContainer: '#ffd9df',
-      onTertiaryContainer: '#32101b',
-      error: '#ba1a1a',
-      onError: '#ffffff',
-      errorContainer: '#ffdad6',
-      onErrorContainer: '#410002',
-      outline: '#7a757f',
-      outlineVariant: '#cbc4cf',
-      inverseSurface: '#322f37',
-      inverseOnSurface: '#f5eff8',
-      inversePrimary: '#d8b9f7',
-    },
-  },
-  {
-    id: 'ocean_cyan',
-    name: 'Ocean & Emerald',
-    subtitle: 'Deep sea & vibrant aqua',
-    dualTone: ['#123d42', '#72d8dc'],
-    dark: {
-      background: '#0e1515',
-      onBackground: '#dee4e4',
-      surface: '#0e1515',
-      onSurface: '#dee4e4',
-      surfaceVariant: '#3f4848',
-      onSurfaceVariant: '#bec8c8',
-      surfaceContainerLowest: '#090f10',
-      surfaceContainerLow: '#171d1e',
-      surfaceContainer: '#1b2122',
-      surfaceContainerHigh: '#252c2c',
-      surfaceContainerHighest: '#303737',
-      surfaceDim: '#0e1515',
-      surfaceBright: '#363d3e',
-      primary: '#72d8dc',
-      onPrimary: '#00373a',
-      primaryContainer: '#004f53',
-      onPrimaryContainer: '#90f4f8',
-      secondary: '#b1cbcc',
-      onSecondary: '#1b3435',
-      secondaryContainer: '#324b4c',
-      onSecondaryContainer: '#cde7e8',
-      tertiary: '#b6c8e8',
-      onTertiary: '#20324b',
-      tertiaryContainer: '#374863',
-      onTertiaryContainer: '#d6e3ff',
-      error: '#ffb4ab',
-      onError: '#690005',
-      errorContainer: '#93000a',
-      onErrorContainer: '#ffdad6',
-      outline: '#899393',
-      outlineVariant: '#3f4848',
-      inverseSurface: '#dee4e4',
-      inverseOnSurface: '#2b3132',
-      inversePrimary: '#00696e',
-    },
-    light: {
-      background: '#f4fbfb',
-      onBackground: '#161d1d',
-      surface: '#f4fbfb',
-      onSurface: '#161d1d',
-      surfaceVariant: '#dae5e5',
-      onSurfaceVariant: '#3f4848',
-      surfaceContainerLowest: '#ffffff',
-      surfaceContainerLow: '#eef5f5',
-      surfaceContainer: '#e8eff0',
-      surfaceContainerHigh: '#e2eaeb',
-      surfaceContainerHighest: '#dce4e5',
-      surfaceDim: '#d6dedf',
-      surfaceBright: '#f4fbfb',
-      primary: '#00696e',
-      onPrimary: '#ffffff',
-      primaryContainer: '#90f4f8',
-      onPrimaryContainer: '#002022',
-      secondary: '#4a6263',
-      onSecondary: '#ffffff',
-      secondaryContainer: '#cde7e8',
-      onSecondaryContainer: '#051f20',
-      tertiary: '#4e607c',
-      onTertiary: '#ffffff',
-      tertiaryContainer: '#d6e3ff',
-      onTertiaryContainer: '#071c35',
-      error: '#ba1a1a',
-      onError: '#ffffff',
-      errorContainer: '#ffdad6',
-      onErrorContainer: '#410002',
-      outline: '#6f7979',
-      outlineVariant: '#bec8c8',
-      inverseSurface: '#2b3132',
-      inverseOnSurface: '#ecf2f2',
-      inversePrimary: '#72d8dc',
-    },
-  },
-  {
-    id: 'charcoal_neutral',
-    name: 'Charcoal & Slate',
-    subtitle: 'Classic balanced monochrome',
-    dualTone: ['#2b2d30', '#c6c6c8'],
-    dark: {
-      background: '#121315',
-      onBackground: '#e2e2e5',
-      surface: '#121315',
-      onSurface: '#e2e2e5',
-      surfaceVariant: '#44474b',
-      onSurfaceVariant: '#c4c7cc',
-      surfaceContainerLowest: '#0d0e10',
-      surfaceContainerLow: '#1a1b1d',
-      surfaceContainer: '#1e1f21',
-      surfaceContainerHigh: '#292a2c',
-      surfaceContainerHighest: '#333537',
-      surfaceDim: '#121315',
-      surfaceBright: '#393a3d',
-      primary: '#c4c6cb',
-      onPrimary: '#2d3034',
-      primaryContainer: '#44474b',
-      onPrimaryContainer: '#e1e3e7',
-      secondary: '#c5c6ca',
-      onSecondary: '#2e3134',
-      secondaryContainer: '#44474a',
-      onSecondaryContainer: '#e1e2e6',
-      tertiary: '#c7c6cb',
-      onTertiary: '#303034',
-      tertiaryContainer: '#46464b',
-      onTertiaryContainer: '#e4e2e7',
-      error: '#ffb4ab',
-      onError: '#690005',
-      errorContainer: '#93000a',
-      onErrorContainer: '#ffdad6',
-      outline: '#8e9195',
-      outlineVariant: '#44474b',
-      inverseSurface: '#e2e2e5',
-      inverseOnSurface: '#2f3033',
-      inversePrimary: '#5c5e63',
-    },
-    light: {
-      background: '#fbf8fa',
-      onBackground: '#1a1b1e',
-      surface: '#fbf8fa',
-      onSurface: '#1a1b1e',
-      surfaceVariant: '#e1e2e6',
-      onSurfaceVariant: '#44474b',
-      surfaceContainerLowest: '#ffffff',
-      surfaceContainerLow: '#f5f3f6',
-      surfaceContainer: '#efeef1',
-      surfaceContainerHigh: '#eae8eb',
-      surfaceContainerHighest: '#e4e2e5',
-      surfaceDim: '#dedde0',
-      surfaceBright: '#fbf8fa',
-      primary: '#5c5e63',
-      onPrimary: '#ffffff',
-      primaryContainer: '#e1e3e7',
-      onPrimaryContainer: '#191c1f',
-      secondary: '#5d5f62',
-      onSecondary: '#ffffff',
-      secondaryContainer: '#e1e2e6',
-      onSecondaryContainer: '#1a1c1e',
-      tertiary: '#5f5e63',
-      onTertiary: '#ffffff',
-      tertiaryContainer: '#e4e2e7',
-      onTertiaryContainer: '#1b1b20',
-      error: '#ba1a1a',
-      onError: '#ffffff',
-      errorContainer: '#ffdad6',
-      onErrorContainer: '#410002',
-      outline: '#75777a',
-      outlineVariant: '#c4c7cc',
-      inverseSurface: '#2f3033',
-      inverseOnSurface: '#f1f0f3',
-      inversePrimary: '#c4c6cb',
+      inversePrimary: '#9ecfa2',
     },
   },
 ];
 
 export const PALETTE_STORAGE_KEY = 'reco_m3_palette_id';
-export const DEFAULT_PALETTE_ID = 'burgundy_rose'; // Matches user's Pixel Barca Wallpaper Colors
+export const DEFAULT_PALETTE_ID = 'dynamic_system';
 
 export function getActivePalette(paletteId?: string): MaterialPalette {
   const id = paletteId || (typeof localStorage !== 'undefined' ? localStorage.getItem(PALETTE_STORAGE_KEY) : null) || DEFAULT_PALETTE_ID;
+
+  if (id === 'dynamic_system') {
+    return getDynamicSystemPalette();
+  }
+
   return MATERIAL_PALETTES.find((p) => p.id === id) || MATERIAL_PALETTES[0];
 }
 
@@ -614,61 +1042,65 @@ export function applyMaterialTokens(
 ): void {
   if (typeof document === 'undefined') return;
 
-  const tokens = isDark ? palette.dark : palette.light;
+  // If this is dynamic system, generate fresh tokens based on live OS AccentColor
+  const activeTokens = palette.id === 'dynamic_system'
+    ? (isDark ? getDynamicSystemPalette().dark : getDynamicSystemPalette().light)
+    : (isDark ? palette.dark : palette.light);
+
   const root = document.documentElement;
 
   // Set CSS Variables on root
-  root.style.setProperty('--md-sys-color-background', tokens.background);
-  root.style.setProperty('--md-sys-color-on-background', tokens.onBackground);
-  root.style.setProperty('--md-sys-color-surface', tokens.surface);
-  root.style.setProperty('--md-sys-color-on-surface', tokens.onSurface);
-  root.style.setProperty('--md-sys-color-surface-variant', tokens.surfaceVariant);
-  root.style.setProperty('--md-sys-color-on-surface-variant', tokens.onSurfaceVariant);
+  root.style.setProperty('--md-sys-color-background', activeTokens.background);
+  root.style.setProperty('--md-sys-color-on-background', activeTokens.onBackground);
+  root.style.setProperty('--md-sys-color-surface', activeTokens.surface);
+  root.style.setProperty('--md-sys-color-on-surface', activeTokens.onSurface);
+  root.style.setProperty('--md-sys-color-surface-variant', activeTokens.surfaceVariant);
+  root.style.setProperty('--md-sys-color-on-surface-variant', activeTokens.onSurfaceVariant);
 
-  root.style.setProperty('--md-sys-color-surface-container-lowest', tokens.surfaceContainerLowest);
-  root.style.setProperty('--md-sys-color-surface-container-low', tokens.surfaceContainerLow);
-  root.style.setProperty('--md-sys-color-surface-container', tokens.surfaceContainer);
-  root.style.setProperty('--md-sys-color-surface-container-high', tokens.surfaceContainerHigh);
-  root.style.setProperty('--md-sys-color-surface-container-highest', tokens.surfaceContainerHighest);
-  root.style.setProperty('--md-sys-color-surface-dim', tokens.surfaceDim);
-  root.style.setProperty('--md-sys-color-surface-bright', tokens.surfaceBright);
+  root.style.setProperty('--md-sys-color-surface-container-lowest', activeTokens.surfaceContainerLowest);
+  root.style.setProperty('--md-sys-color-surface-container-low', activeTokens.surfaceContainerLow);
+  root.style.setProperty('--md-sys-color-surface-container', activeTokens.surfaceContainer);
+  root.style.setProperty('--md-sys-color-surface-container-high', activeTokens.surfaceContainerHigh);
+  root.style.setProperty('--md-sys-color-surface-container-highest', activeTokens.surfaceContainerHighest);
+  root.style.setProperty('--md-sys-color-surface-dim', activeTokens.surfaceDim);
+  root.style.setProperty('--md-sys-color-surface-bright', activeTokens.surfaceBright);
 
-  root.style.setProperty('--md-sys-color-primary', tokens.primary);
-  root.style.setProperty('--md-sys-color-on-primary', tokens.onPrimary);
-  root.style.setProperty('--md-sys-color-primary-container', tokens.primaryContainer);
-  root.style.setProperty('--md-sys-color-on-primary-container', tokens.onPrimaryContainer);
+  root.style.setProperty('--md-sys-color-primary', activeTokens.primary);
+  root.style.setProperty('--md-sys-color-on-primary', activeTokens.onPrimary);
+  root.style.setProperty('--md-sys-color-primary-container', activeTokens.primaryContainer);
+  root.style.setProperty('--md-sys-color-on-primary-container', activeTokens.onPrimaryContainer);
 
-  root.style.setProperty('--md-sys-color-secondary', tokens.secondary);
-  root.style.setProperty('--md-sys-color-on-secondary', tokens.onSecondary);
-  root.style.setProperty('--md-sys-color-secondary-container', tokens.secondaryContainer);
-  root.style.setProperty('--md-sys-color-on-secondary-container', tokens.onSecondaryContainer);
+  root.style.setProperty('--md-sys-color-secondary', activeTokens.secondary);
+  root.style.setProperty('--md-sys-color-on-secondary', activeTokens.onSecondary);
+  root.style.setProperty('--md-sys-color-secondary-container', activeTokens.secondaryContainer);
+  root.style.setProperty('--md-sys-color-on-secondary-container', activeTokens.onSecondaryContainer);
 
-  root.style.setProperty('--md-sys-color-tertiary', tokens.tertiary);
-  root.style.setProperty('--md-sys-color-on-tertiary', tokens.onTertiary);
-  root.style.setProperty('--md-sys-color-tertiary-container', tokens.tertiaryContainer);
-  root.style.setProperty('--md-sys-color-on-tertiary-container', tokens.onTertiaryContainer);
+  root.style.setProperty('--md-sys-color-tertiary', activeTokens.tertiary);
+  root.style.setProperty('--md-sys-color-on-tertiary', activeTokens.onTertiary);
+  root.style.setProperty('--md-sys-color-tertiary-container', activeTokens.tertiaryContainer);
+  root.style.setProperty('--md-sys-color-on-tertiary-container', activeTokens.onTertiaryContainer);
 
-  root.style.setProperty('--md-sys-color-error', tokens.error);
-  root.style.setProperty('--md-sys-color-on-error', tokens.onError);
-  root.style.setProperty('--md-sys-color-error-container', tokens.errorContainer);
-  root.style.setProperty('--md-sys-color-on-error-container', tokens.onErrorContainer);
+  root.style.setProperty('--md-sys-color-error', activeTokens.error);
+  root.style.setProperty('--md-sys-color-on-error', activeTokens.onError);
+  root.style.setProperty('--md-sys-color-error-container', activeTokens.errorContainer);
+  root.style.setProperty('--md-sys-color-on-error-container', activeTokens.onErrorContainer);
 
-  root.style.setProperty('--md-sys-color-outline', tokens.outline);
-  root.style.setProperty('--md-sys-color-outline-variant', tokens.outlineVariant);
+  root.style.setProperty('--md-sys-color-outline', activeTokens.outline);
+  root.style.setProperty('--md-sys-color-outline-variant', activeTokens.outlineVariant);
 
-  root.style.setProperty('--md-sys-color-inverse-surface', tokens.inverseSurface);
-  root.style.setProperty('--md-sys-color-inverse-on-surface', tokens.inverseOnSurface);
-  root.style.setProperty('--md-sys-color-inverse-primary', tokens.inversePrimary);
+  root.style.setProperty('--md-sys-color-inverse-surface', activeTokens.inverseSurface);
+  root.style.setProperty('--md-sys-color-inverse-on-surface', activeTokens.inverseOnSurface);
+  root.style.setProperty('--md-sys-color-inverse-primary', activeTokens.inversePrimary);
 
   // Critical for Android Status Bar & Overscroll window blending
-  document.documentElement.style.backgroundColor = tokens.background;
+  document.documentElement.style.backgroundColor = activeTokens.background;
   document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
   if (document.body) {
-    document.body.style.backgroundColor = tokens.background;
+    document.body.style.backgroundColor = activeTokens.background;
   }
 
   // Update Status Bar theme-color meta tags
-  updateStatusBarThemeColor(tokens.background, isDark, themeMode, palette);
+  updateStatusBarThemeColor(activeTokens.background, isDark, themeMode, palette);
 }
 
 /**
@@ -691,8 +1123,6 @@ export function updateStatusBarThemeColor(
   }
 
   // 2. Synchronize <meta name="color-scheme">
-  // In explicit light mode, setting color-scheme to 'light' signals to Android Chrome
-  // that the document is solely in light mode, preventing UA auto-darkening and dark bar enforcement.
   let colorSchemeMeta = document.getElementById('color-scheme-meta') as HTMLMetaElement | null;
   if (!colorSchemeMeta) {
     colorSchemeMeta = document.querySelector('meta[name="color-scheme"]');
@@ -702,19 +1132,6 @@ export function updateStatusBarThemeColor(
   }
 
   // 3. Update theme-color meta tags
-  // CRITICAL RULE FOR CHROME ON ANDROID:
-  // When an Android device has system Dark Mode enabled and the user selects Light Mode:
-  // If ANY meta tag with media="(prefers-color-scheme: dark)" is present in the document,
-  // Chrome on Android will MATCH that tag. If that tag's content is set to a light color (like #fff0f3),
-  // Chrome rejects the light color for dark mode and forces the status bar to solid black (#000000),
-  // while concurrently setting status bar icons to dark (black on black!).
-  //
-  // Therefore, in EXPLICIT mode ('light' or 'dark'):
-  // There must be ONE and ONLY ONE <meta name="theme-color"> tag with NO media attribute.
-  // Any media-specific tags (theme-color-dark, theme-color-light) must be removed.
-  // Additionally, we do NOT wipe/recreate the canonical base tag, but rather update its content attribute
-  // in-place so Chromium's native WebContentsObserver immediately applies the change without fallback flash.
-
   let baseMeta = document.getElementById('theme-color-meta') as HTMLMetaElement | null;
   if (!baseMeta) {
     baseMeta = document.querySelector('meta[name="theme-color"]:not([media])');
@@ -730,11 +1147,8 @@ export function updateStatusBarThemeColor(
   const lightMeta = document.getElementById('theme-color-light') as HTMLMetaElement | null;
 
   if (themeMode === 'system') {
-    // In System Auto mode: provide matching media query tags
-    // prefers-color-scheme: dark gets the palette's genuine dark background
-    // prefers-color-scheme: light gets the palette's genuine light background
-    const darkBg = palette?.dark.background ?? (isDark ? targetColor : '#221016');
-    const lightBg = palette?.light.background ?? (!isDark ? targetColor : '#fff0f3');
+    const darkBg = palette?.dark.background ?? (isDark ? targetColor : '#10131a');
+    const lightBg = palette?.light.background ?? (!isDark ? targetColor : '#f8f9ff');
 
     let currentDarkMeta = darkMeta;
     if (!currentDarkMeta) {
@@ -756,16 +1170,12 @@ export function updateStatusBarThemeColor(
     currentLightMeta.setAttribute('media', '(prefers-color-scheme: light)');
     currentLightMeta.setAttribute('content', lightBg);
 
-    // Fallback base tag matches current active state
     baseMeta.removeAttribute('media');
     baseMeta.setAttribute('content', targetColor);
   } else {
-    // In EXPLICIT mode ('light' or 'dark'):
-    // Remove media query tags so Chrome for Android cannot match system dark mode query.
     if (darkMeta) darkMeta.remove();
     if (lightMeta) lightMeta.remove();
 
-    // Clean up any other stray theme-color tags with media queries
     const allMetas = document.querySelectorAll('meta[name="theme-color"]');
     allMetas.forEach((m) => {
       if (m !== baseMeta) m.remove();
@@ -794,5 +1204,16 @@ export function updateStatusBarThemeColor(
   const manifestLink = document.getElementById('manifest-link');
   if (manifestLink) {
     manifestLink.setAttribute('href', isDark ? '/manifest-dark.json' : '/manifest-light.json');
+  }
+
+  // 7. Update favicon & Apple touch icon based on light/dark mode
+  const faviconLink = document.getElementById('favicon-link') || document.querySelector('link[rel="icon"][sizes="32x32"]');
+  if (faviconLink) {
+    faviconLink.setAttribute('href', isDark ? '/icons/icon-dark-32.png' : '/favicon.png');
+  }
+
+  const appleIcon = document.getElementById('apple-touch-icon') || document.querySelector('link[rel="apple-touch-icon"]');
+  if (appleIcon) {
+    appleIcon.setAttribute('href', isDark ? '/icons/icon-dark-180.png' : '/apple-touch-icon.png');
   }
 }

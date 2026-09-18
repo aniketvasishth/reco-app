@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Check, Moon, Sun, Smartphone, Sparkles, Maximize2, Minimize2 } from 'lucide-react';
+import { X, Check, Moon, Sun, Smartphone, Sparkles, Maximize2, Minimize2, Wand2 } from 'lucide-react';
 import {
   MATERIAL_PALETTES,
   MaterialPalette,
   DEFAULT_PALETTE_ID,
+  detectAndroidDynamicAccent,
 } from '../utils/themePalettes';
 import { ThemeMode } from '../types';
 
@@ -31,7 +32,19 @@ export function ThemePaletteModal({
   isImmersive = false,
   onToggleImmersive,
 }: ThemePaletteModalProps) {
+  const [detectedAccent, setDetectedAccent] = useState<{ hex: string; isNative: boolean }>(() =>
+    detectAndroidDynamicAccent()
+  );
+
+  useEffect(() => {
+    if (isOpen) {
+      setDetectedAccent(detectAndroidDynamicAccent());
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
+
+  const isDynamicActive = activePaletteId === 'dynamic_system' || !activePaletteId;
 
   return (
     <AnimatePresence>
@@ -65,8 +78,8 @@ export function ThemePaletteModal({
                 <Sparkles className="w-5 h-5" />
               </div>
               <div>
-                <h2 className="text-lg font-bold text-m3-on-surface">Wallpaper & Colors</h2>
-                <p className="text-xs text-m3-on-surface-variant">Material You Dynamic System</p>
+                <h2 className="text-lg font-bold text-m3-on-surface">Wallpaper &amp; style</h2>
+                <p className="text-xs text-m3-on-surface-variant">Material You Dynamic Theme</p>
               </div>
             </div>
             <button
@@ -78,30 +91,64 @@ export function ThemePaletteModal({
             </button>
           </div>
 
-          <div className="p-6 overflow-y-auto space-y-6">
-            {/* Explanatory banner matching Pixel Wallpaper & style */}
-            <div className="p-4 rounded-2xl bg-m3-surface-container-high border border-m3-outline-variant/25">
-              <p className="text-xs sm:text-sm text-m3-on-surface-variant leading-relaxed">
-                Icons, text, and accents adapt dynamically to match your Android wallpaper colors and system status bar.
-              </p>
+          <div className="p-6 overflow-y-auto space-y-5">
+            {/* Dynamic System Monet Active Option */}
+            <div
+              onClick={() => onSelectPalette('dynamic_system')}
+              className={`p-4 rounded-3xl border transition-all cursor-pointer flex items-center justify-between ${
+                isDynamicActive
+                  ? 'bg-m3-primary-container/30 border-m3-primary ring-2 ring-m3-primary shadow-xs'
+                  : 'bg-m3-surface-container-high border-m3-outline-variant/30 hover:bg-m3-surface-container-highest'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-2xl bg-m3-primary flex items-center justify-center text-m3-on-primary shadow-xs">
+                  <Wand2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-bold text-m3-on-surface">
+                      Android Dynamic System
+                    </h3>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-m3-primary text-m3-on-primary font-semibold uppercase tracking-wider">
+                      Auto
+                    </span>
+                  </div>
+                  <p className="text-xs text-m3-on-surface-variant mt-0.5">
+                    Syncs automatically with your Android Wallpaper &amp; Style accent
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <div
+                  className="w-5 h-5 rounded-full border border-white/30 shadow-xs"
+                  style={{ backgroundColor: detectedAccent.hex }}
+                  title={`Detected Accent: ${detectedAccent.hex}`}
+                />
+                {isDynamicActive && (
+                  <span className="w-5 h-5 rounded-full bg-m3-primary text-m3-on-primary flex items-center justify-center shadow-xs">
+                    <Check className="w-3 h-3 stroke-[3]" />
+                  </span>
+                )}
+              </div>
             </div>
 
-            {/* Android Wallpaper Color Palettes (Circle Chips matching Screenshot 1) */}
+            {/* Android Wallpaper Color Palettes (Circle Chips matching Pixel Wallpaper & style) */}
             <div>
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-m3-primary">
-                  Wallpaper Palettes
+                  Wallpaper Colors
                 </h3>
                 <span className="text-[11px] font-medium text-m3-on-surface-variant">
-                  {MATERIAL_PALETTES.find((p) => p.id === activePaletteId)?.name}
+                  {MATERIAL_PALETTES.find((p) => p.id === activePaletteId)?.name || 'Dynamic System'}
                 </span>
               </div>
 
-              {/* 7 Circular Dual-Tone Chips */}
+              {/* Circular Dual-Tone Chips */}
               <div className="grid grid-cols-4 sm:grid-cols-7 gap-3 sm:gap-2">
-                {MATERIAL_PALETTES.map((palette) => {
+                {MATERIAL_PALETTES.filter((p) => p.id !== 'dynamic_system').map((palette) => {
                   const isSelected = palette.id === activePaletteId;
-                  const isPhoneDefault = palette.id === DEFAULT_PALETTE_ID;
 
                   return (
                     <motion.button
@@ -115,7 +162,7 @@ export function ThemePaletteModal({
                       <div
                         className={`relative w-14 h-14 sm:w-13 sm:h-13 rounded-2xl p-1 flex items-center justify-center transition-all ${
                           isSelected
-                            ? 'ring-2 ring-m3-primary bg-m3-primary/10 shadow-xs'
+                            ? 'ring-2 ring-m3-primary bg-m3-primary/15 shadow-xs'
                             : 'hover:bg-m3-surface-container-highest/60'
                         }`}
                       >
@@ -149,12 +196,6 @@ export function ThemePaletteModal({
                       >
                         {palette.name.split(' ')[0]}
                       </span>
-
-                      {isPhoneDefault && (
-                        <span className="text-[9px] px-1 py-0.2 rounded-sm bg-m3-tertiary-container text-m3-on-tertiary-container font-mono uppercase tracking-tighter">
-                          Phone
-                        </span>
-                      )}
                     </motion.button>
                   );
                 })}

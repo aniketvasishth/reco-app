@@ -18,6 +18,7 @@ interface HeaderProps {
   onOpenFeedback: () => void;
   onOpenHowTo: () => void;
   onOpenInstall?: () => void;
+  onOpenPrivacySettings?: () => void;
 }
 
 export function Header({
@@ -27,6 +28,7 @@ export function Header({
   onOpenFeedback,
   onOpenHowTo,
   onOpenInstall,
+  onOpenPrivacySettings,
 }: HeaderProps) {
   const [showSecurityTooltip, setShowSecurityTooltip] = useState(false);
   const securityTimerRef = useRef<number | null>(null);
@@ -41,11 +43,11 @@ export function Header({
     setShowSecurityTooltip((prev) => {
       const next = !prev;
       if (next) {
-        // Automatically fade away after 4 seconds if not closed manually
+        // Automatically fade away after 6 seconds if not closed manually
         securityTimerRef.current = window.setTimeout(() => {
           setShowSecurityTooltip(false);
           securityTimerRef.current = null;
-        }, 4000);
+        }, 6000);
       }
       return next;
     });
@@ -83,7 +85,7 @@ export function Header({
                   ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 ring-2 ring-emerald-500/40'
                   : 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10'
               }`}
-              title={showSecurityTooltip ? 'Hide Privacy Info' : 'Privacy & Data Security (Tap to show/hide)'}
+              title={showSecurityTooltip ? 'Hide Privacy Info' : 'Privacy & Data Security (Tap for on-device status)'}
               aria-label="Privacy and data security information"
               aria-expanded={showSecurityTooltip}
             >
@@ -106,10 +108,23 @@ export function Header({
                     <div className="flex items-start gap-2.5">
                       <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                       <div>
-                        <p className="font-semibold text-m3-inverse-on-surface mb-0.5">Data Privacy & Security</p>
+                        <p className="font-semibold text-m3-inverse-on-surface mb-0.5">100% On-Device & Private</p>
                         <p className="opacity-90 text-[11px] leading-normal">
-                          Your data remains completely private and secure. All receipt data is stored locally on your device and is never transmitted to remote servers.
+                          Your receipt data and OCR run exclusively on your local device with complete privacy.
                         </p>
+                        {onOpenPrivacySettings && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              handleCloseSecurityTooltip();
+                              onOpenPrivacySettings();
+                            }}
+                            className="mt-2 text-[11px] font-bold text-emerald-300 hover:text-emerald-200 underline flex items-center gap-1 cursor-pointer"
+                          >
+                            <span>Open Engine & Privacy Settings</span>
+                            <ChevronRight className="w-3 h-3" />
+                          </button>
+                        )}
                       </div>
                     </div>
                     <button
@@ -139,8 +154,8 @@ export function Header({
             <HelpCircle className="w-5 h-5 text-m3-primary" />
           </motion.button>
 
-          {/* Quick Install App Button in Header when not yet installed */}
-          {!isInstalled && onOpenInstall && (
+          {/* Quick Install App Button in Header */}
+          {onOpenInstall && (
             <>
               <motion.button
                 whileTap={{ scale: 0.94 }}
@@ -150,14 +165,14 @@ export function Header({
                 title="Install Reco to Homescreen & App Drawer"
               >
                 <Download className="w-3.5 h-3.5 shrink-0" />
-                <span>Install App</span>
+                <span>{isInstalled ? 'App Installed' : 'Install App'}</span>
               </motion.button>
               <motion.button
                 whileTap={{ scale: 0.92 }}
                 id="header-install-app-mobile-btn"
                 onClick={onOpenInstall}
                 className="sm:hidden p-2 rounded-full text-m3-primary hover:bg-m3-primary/10 transition-colors cursor-pointer flex items-center justify-center"
-                title="Install Reco App"
+                title={isInstalled ? 'App is Installed' : 'Install Reco App'}
                 aria-label="Install App"
               >
                 <Download className="w-4.5 h-4.5" />
@@ -168,11 +183,11 @@ export function Header({
 
         {/* Right Actions: Feedback & Summary Button */}
         <div className="flex items-center gap-1.5 shrink-0 pl-1">
-          {/* Feedback & Bug Report - M3 Standard Icon Button */}
+          {/* Feedback & Bug Report - M3 Standard Icon Button (Always visible on all screen sizes) */}
           <motion.button
             whileTap={{ scale: 0.92 }}
             onClick={onOpenFeedback}
-            className="hidden xs:inline-flex p-2 rounded-full text-m3-on-surface-variant hover:text-m3-primary hover:bg-m3-surface-container-highest transition-colors cursor-pointer"
+            className="inline-flex p-2 rounded-full text-m3-on-surface-variant hover:text-m3-primary hover:bg-m3-surface-container-highest transition-colors cursor-pointer"
             title="Send Feedback or Report Bug to developer"
             aria-label="Send feedback"
           >

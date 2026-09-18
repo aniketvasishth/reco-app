@@ -11,13 +11,61 @@ declare global {
   }
 }
 
-const DISMISS_STORAGE_KEY = 'reco_pwa_prompt_dismissed_session';
+const SESSION_DISMISS_STORAGE_KEY = 'reco_pwa_prompt_dismissed_session';
+const PERMANENT_INSTALLED_KEY = 'reco_pwa_installed_permanent';
+const HOMESCREEN_ADDED_KEY = 'reco_pwa_homescreen_added';
+const LEGACY_INSTALLED_KEY = 'reco_pwa_installed';
+const PERMANENT_DISMISS_KEY = 'reco_pwa_prompt_dismissed_permanent';
+
+/**
+ * Checks if the application is currently running in standalone display mode
+ * (launched from phone homescreen icon or desktop standalone window)
+ */
+export function isAppRunningInStandaloneMode(): boolean {
+  if (typeof window === 'undefined') return false;
+
+  const isStandaloneMedia =
+    window.matchMedia?.('(display-mode: standalone)')?.matches ||
+    window.matchMedia?.('(display-mode: window-controls-overlay)')?.matches ||
+    window.matchMedia?.('(display-mode: fullscreen)')?.matches ||
+    window.matchMedia?.('(display-mode: minimal-ui)')?.matches;
+
+  const isIosStandalone =
+    (window.navigator as unknown as { standalone?: boolean }).standalone === true;
+
+  const isReferrerAndroidApp =
+    typeof document !== 'undefined' && document.referrer.includes('android-app://');
+
+  const isQueryStandalone =
+    typeof window !== 'undefined' && window.location.search.includes('mode=standalone');
+
+  return Boolean(isStandaloneMedia || isIosStandalone || isReferrerAndroidApp || isQueryStandalone);
+}
+
+/**
+ * Checks if the user has previously installed the PWA or added a shortcut to Home Screen
+ */
+export function isAppMarkedAsInstalled(): boolean {
+  if (typeof window === 'undefined') return false;
+  if (isAppRunningInStandaloneMode()) return true;
+
+  try {
+    const permanentInstalled = localStorage.getItem(PERMANENT_INSTALLED_KEY) === 'true';
+    const homescreenAdded = localStorage.getItem(HOMESCREEN_ADDED_KEY) === 'true';
+    const legacyInstalled = localStorage.getItem(LEGACY_INSTALLED_KEY) === 'true';
+    const permanentDismiss = localStorage.getItem(PERMANENT_DISMISS_KEY) === 'true';
+
+    return permanentInstalled || homescreenAdded || legacyInstalled || permanentDismiss;
+  } catch {
+    return false;
+  }
+}
 
 export function usePWAInstall() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(
     () => (typeof window !== 'undefined' ? window.__pwaDeferredPrompt || null : null)
   );
-  const [isInstalled, setIsInstalled] = useState(false);
+  const [isInstalled, setIsInstalled] = useState<boolean>(() => isAppMarkedAsInstalled());
   const [isIOS, setIsIOS] = useState(false);
   const [isAndroid, setIsAndroid] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -25,22 +73,15 @@ export function usePWAInstall() {
   const [userDismissed, setUserDismissed] = useState(false);
 
   useEffect(() => {
-    // Check if running in standalone mode (already installed as PWA or launched via homescreen)
-    const checkIsInstalled = () => {
-      const isStandalone =
-        window.matchMedia('(display-mode: standalone)').matches ||
-        window.matchMedia('(display-mode: window-controls-overlay)').matches ||
-        window.matchMedia('(display-mode: fullscreen)').matches ||
-        (window.navigator as unknown as { standalone?: boolean }).standalone === true ||
-        document.referrer.includes('android-app://') ||
-        window.location.search.includes('mode=standalone');
-      return isStandalone;
-    };
+    // 1. Initial Synchronous Check for Standalone Mode & Persistent Storage Flags
+    const initialStandalone = isAppRunningInStandaloneMode();
+    const previouslyInstalled = isAppMarkedAsInstalled();
 
-    const standalone = checkIsInstalled();
-    setIsInstalled(standalone);
+    if (initialStandalone || previouslyInstalled) {
+      setIsInstalled(true);
+    }
 
-    // Detect device platform
+    // 2. Detect device platform
     const ua = window.navigator.userAgent.toLowerCase();
     const isIOSDevice =
       /iphone|ipad|ipod/.test(ua) ||
@@ -56,40 +97,83 @@ export function usePWAInstall() {
     setIsAndroid(isAndroidDevice);
     setIsMobile(isMobileDevice);
 
-    // Check if user dismissed in this session
-    let dismissedInSession = false;
+    // 3. Check session and permanent dismiss flags
+    let isDismissed = false;
     try {
-      dismissedInSession = sessionStorage.getItem(DISMISS_STORAGE_KEY) === 'true';
+      const sessionDismissed = sessionStorage.getItem(SESSION_DISMISS_STORAGE_KEY) === 'true';
+      const permanentDismissed = localStorage.getItem(PERMANENT_DISMISS_KEY) === 'true';
+      isDismissed = sessionDismissed || permanentDismissed;
     } catch {
       // Ignore
     }
-    setUserDismissed(dismissedInSession);
+    setUserDismissed(isDismissed);
 
-    // Auto-show prompt banner if not already installed and not dismissed
+    // 4. Query native Android / Chrome getInstalledRelatedApps() API
+    let isCancelled = false;
+    const queryRelatedApps = async () => {
+      if (typeof navigator !== 'undefined' && 'getInstalledRelatedApps' in navigator) {
+        try {
+          const getInstalled = (
+            navigator as Navigator & {
+              getInstalledRelatedApps?: () => Promise<Array<{ id?: string; platform?: string; url?: string }>>;
+            }
+          ).getInstalledRelatedApps;
+
+          if (typeof getInstalled === 'function') {
+            const relatedApps = await getInstalled.call(navigator);
+            if (!isCancelled && Array.isArray(relatedApps) && relatedApps.length > 0) {
+              // The app is already installed on the user's Android / Chrome device!
+              setIsInstalled(true);
+              setShowAutoPrompt(false);
+              try {
+                localStorage.setItem(PERMANENT_INSTALLED_KEY, 'true');
+                localStorage.setItem(LEGACY_INSTALLED_KEY, 'true');
+              } catch {}
+              return true;
+            }
+          }
+        } catch (err) {
+          console.debug('getInstalledRelatedApps check non-fatal error:', err);
+        }
+      }
+      return false;
+    };
+
+    // Run the native installed related apps check
+    queryRelatedApps();
+
+    // 5. Auto-show prompt banner ONLY if NOT running standalone, NOT already marked as installed, and NOT dismissed
     let autoPromptTimer: number | null = null;
-    if (!standalone && !dismissedInSession) {
+    if (!initialStandalone && !previouslyInstalled && !isDismissed) {
       autoPromptTimer = window.setTimeout(() => {
-        setShowAutoPrompt(true);
-      }, 800);
+        if (!isCancelled && !isAppMarkedAsInstalled()) {
+          setShowAutoPrompt(true);
+        }
+      }, 1200);
     }
 
+    // 6. Listen for browser install prompt event (Chrome / Edge / Android)
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       const promptEvent = e as BeforeInstallPromptEvent;
       window.__pwaDeferredPrompt = promptEvent;
       setDeferredPrompt(promptEvent);
-      if (!standalone && !dismissedInSession) {
+
+      // If user has not installed and not dismissed, show prompt
+      if (!isAppMarkedAsInstalled() && !isDismissed) {
         setShowAutoPrompt(true);
       }
     };
 
+    // 7. Listen for successful installation event
     const handleAppInstalled = () => {
       setIsInstalled(true);
       setDeferredPrompt(null);
       window.__pwaDeferredPrompt = null;
       setShowAutoPrompt(false);
       try {
-        localStorage.setItem('reco_pwa_installed', 'true');
+        localStorage.setItem(PERMANENT_INSTALLED_KEY, 'true');
+        localStorage.setItem(LEGACY_INSTALLED_KEY, 'true');
       } catch {}
     };
 
@@ -97,6 +181,7 @@ export function usePWAInstall() {
     window.addEventListener('appinstalled', handleAppInstalled);
 
     return () => {
+      isCancelled = true;
       if (autoPromptTimer !== null) {
         clearTimeout(autoPromptTimer);
       }
@@ -118,7 +203,8 @@ export function usePWAInstall() {
           setDeferredPrompt(null);
           window.__pwaDeferredPrompt = null;
           try {
-            localStorage.setItem('reco_pwa_installed', 'true');
+            localStorage.setItem(PERMANENT_INSTALLED_KEY, 'true');
+            localStorage.setItem(LEGACY_INSTALLED_KEY, 'true');
           } catch {}
           return 'accepted';
         } else {
@@ -142,14 +228,43 @@ export function usePWAInstall() {
     return 'unsupported';
   }, [deferredPrompt, isIOS, isAndroid]);
 
-  const dismissPrompt = useCallback(() => {
+  const dismissPrompt = useCallback((permanent = false) => {
     setShowAutoPrompt(false);
     setUserDismissed(true);
     try {
-      sessionStorage.setItem(DISMISS_STORAGE_KEY, 'true');
+      sessionStorage.setItem(SESSION_DISMISS_STORAGE_KEY, 'true');
+      if (permanent) {
+        localStorage.setItem(PERMANENT_DISMISS_KEY, 'true');
+      }
     } catch {
       // Ignore
     }
+  }, []);
+
+  const markAsAddedToHomeScreen = useCallback(() => {
+    setIsInstalled(true);
+    setShowAutoPrompt(false);
+    setUserDismissed(true);
+    try {
+      localStorage.setItem(HOMESCREEN_ADDED_KEY, 'true');
+      localStorage.setItem(PERMANENT_INSTALLED_KEY, 'true');
+      localStorage.setItem(LEGACY_INSTALLED_KEY, 'true');
+    } catch {
+      // Ignore
+    }
+  }, []);
+
+  const resetInstallState = useCallback(() => {
+    try {
+      localStorage.removeItem(PERMANENT_INSTALLED_KEY);
+      localStorage.removeItem(HOMESCREEN_ADDED_KEY);
+      localStorage.removeItem(LEGACY_INSTALLED_KEY);
+      localStorage.removeItem(PERMANENT_DISMISS_KEY);
+      sessionStorage.removeItem(SESSION_DISMISS_STORAGE_KEY);
+    } catch {}
+    setIsInstalled(isAppRunningInStandaloneMode());
+    setUserDismissed(false);
+    setShowAutoPrompt(!isAppRunningInStandaloneMode());
   }, []);
 
   const openPromptManually = useCallback(() => {
@@ -167,6 +282,8 @@ export function usePWAInstall() {
     userDismissed,
     triggerInstall,
     dismissPrompt,
+    markAsAddedToHomeScreen,
+    resetInstallState,
     openPromptManually,
     setShowAutoPrompt,
   };

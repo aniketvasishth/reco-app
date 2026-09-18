@@ -57,10 +57,47 @@
             event.stopImmediatePropagation();
           }
         }, true);
+
+        // Restrict pinch-to-zoom gestures on iOS Safari / WebKit
+        document.addEventListener('gesturestart', function(e) {
+          e.preventDefault();
+        }, { passive: false });
+        document.addEventListener('gesturechange', function(e) {
+          e.preventDefault();
+        }, { passive: false });
+        document.addEventListener('gestureend', function(e) {
+          e.preventDefault();
+        }, { passive: false });
+
+        // Restrict multi-touch pinch zooming
+        document.addEventListener('touchstart', function(e) {
+          if (e.touches && e.touches.length > 1) {
+            e.preventDefault();
+          }
+        }, { passive: false });
+        document.addEventListener('touchmove', function(e) {
+          if (e.touches && e.touches.length > 1) {
+            e.preventDefault();
+          }
+        }, { passive: false });
+
+        // Restrict trackpad/mouse pinch zoom (Ctrl + wheel)
+        document.addEventListener('wheel', function(e) {
+          if (e.ctrlKey) {
+            e.preventDefault();
+          }
+        }, { passive: false });
+
+        // Restrict keyboard zoom shortcuts
+        document.addEventListener('keydown', function(e) {
+          if ((e.ctrlKey || e.metaKey) && (e.key === '+' || e.key === '-' || e.key === '=' || e.key === '0')) {
+            e.preventDefault();
+          }
+        });
       })();
     </script>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>Reco App</title>
     <meta name="description" content="Reco - Wholesale Receipt Search and Instant On-Device Inventory Indexer." />
     <meta property="og:title" content="Reco App" />
@@ -70,52 +107,57 @@
     <meta name="color-scheme" id="color-scheme-meta" content="light dark" />
     
     <!-- PWA & Mobile Web App Standalone Meta Tags with Material 3 Dynamic System Colors -->
-    <meta name="theme-color" id="theme-color-light" media="(prefers-color-scheme: light)" content="#fff0f3" />
-    <meta name="theme-color" id="theme-color-dark" media="(prefers-color-scheme: dark)" content="#221016" />
-    <meta name="theme-color" id="theme-color-meta" content="#fff0f3" />
+    <meta name="theme-color" id="theme-color-light" media="(prefers-color-scheme: light)" content="#f8f9ff" />
+    <meta name="theme-color" id="theme-color-dark" media="(prefers-color-scheme: dark)" content="#10131a" />
+    <meta name="theme-color" id="theme-color-meta" content="#10131a" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" id="apple-status-bar-meta" content="default" />
     <meta name="apple-mobile-web-app-title" content="Reco" />
     <meta name="application-name" content="Reco" />
-    <meta name="msapplication-TileColor" id="ms-tile-color" content="#fff0f3" />
+    <meta name="msapplication-TileColor" id="ms-tile-color" content="#10131a" />
     
     <style>
       html {
         color-scheme: light dark;
       }
       html, body {
-        background-color: #fff0f3;
-        color: #26161b;
+        background-color: #10131a;
+        color: #e0e2ec;
         margin: 0;
         padding: 0;
         min-height: 100%;
         overscroll-behavior-y: none;
+        touch-action: pan-x pan-y;
+        -webkit-text-size-adjust: 100%;
+      }
+      #root {
+        touch-action: pan-x pan-y;
       }
       html:not(.dark), html:not(.dark) body {
         color-scheme: light;
-        background-color: #fff0f3;
-        color: #26161b;
+        background-color: #f8f9ff;
+        color: #181c22;
       }
       html.dark, html.dark body {
         color-scheme: dark;
-        background-color: #221016;
-        color: #efe0e3;
+        background-color: #10131a;
+        color: #e0e2ec;
       }
     </style>
 
     <!-- Standard Favicon and Apple Touch Icons -->
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
+    <link rel="icon" id="favicon-link" type="image/png" sizes="32x32" href="/favicon.png" />
     <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
     <link rel="apple-touch-icon" id="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     
     <!-- Standard PWA Web App Manifest for Android WebAPK and Chrome installation -->
-    <link rel="manifest" id="manifest-link" href="/manifest-light.json" />
+    <link rel="manifest" id="manifest-link" href="/manifest.json" />
 
     <script>
       (function() {
         var savedTheme = null;
-        var savedPalette = 'burgundy_rose';
+        var savedPalette = 'dynamic_system';
         try {
           savedTheme = localStorage.getItem('costco_receipt_theme');
           var p = localStorage.getItem('reco_m3_palette_id');
@@ -135,18 +177,20 @@
           document.documentElement.style.colorScheme = 'light';
         }
 
-        // Palette-aware early background color
+        // Palette-aware early background color matching Material You & Pixel 9 swatches
         var bgColors = {
+          dynamic_system: { dark: '#10131a', light: '#f8f9ff' },
+          pixel_slate_blue: { dark: '#10131a', light: '#f8f9ff' },
+          plum_taupe: { dark: '#161212', light: '#fff8f7' },
           burgundy_rose: { dark: '#221016', light: '#fff0f3' },
           peach_teal: { dark: '#1d120f', light: '#fff8f6' },
-          ice_blue: { dark: '#101418', light: '#f7f9ff' },
-          forest_sage: { dark: '#111512', light: '#f7faf4' },
-          royal_violet: { dark: '#16121b', light: '#fdf7ff' },
-          ocean_cyan: { dark: '#0e1515', light: '#f4fbfb' },
-          charcoal_neutral: { dark: '#121315', light: '#fbf8fa' }
+          charcoal_lavender: { dark: '#121318', light: '#f9f9ff' },
+          royal_blue_magenta: { dark: '#0e1420', light: '#f8f9ff' },
+          cobalt_emerald: { dark: '#0d141e', light: '#f7f9ff' },
+          forest_sage: { dark: '#111512', light: '#f7faf4' }
         };
 
-        var activePalette = bgColors[savedPalette] || bgColors.burgundy_rose;
+        var activePalette = bgColors[savedPalette] || bgColors.dynamic_system;
         var targetBg = isDark ? activePalette.dark : activePalette.light;
 
         document.documentElement.style.backgroundColor = targetBg;
@@ -172,8 +216,6 @@
           }
           if (colorSchemeMeta) colorSchemeMeta.setAttribute('content', 'light dark');
         } else {
-          // Explicit mode: Remove the opposite/conflicting media query tags so
-          // Android Chrome doesn't evaluate (prefers-color-scheme: dark) against a light color
           if (darkMeta) darkMeta.remove();
           if (lightMeta) lightMeta.remove();
           if (baseMeta) {
@@ -192,6 +234,16 @@
         var manifestLink = document.getElementById('manifest-link');
         if (manifestLink) {
           manifestLink.setAttribute('href', isDark ? '/manifest-dark.json' : '/manifest-light.json');
+        }
+
+        var faviconLink = document.getElementById('favicon-link');
+        if (faviconLink) {
+          faviconLink.setAttribute('href', isDark ? '/icons/icon-dark-32.png' : '/favicon.png');
+        }
+
+        var appleIcon = document.getElementById('apple-touch-icon');
+        if (appleIcon) {
+          appleIcon.setAttribute('href', isDark ? '/icons/icon-dark-180.png' : '/apple-touch-icon.png');
         }
       })();
     </script>

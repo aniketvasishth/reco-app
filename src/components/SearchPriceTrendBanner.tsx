@@ -89,9 +89,13 @@ export function SearchPriceTrendBanner({
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                  {/* Trend Pill */}
-                  <div
-                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold shadow-2xs border ${
+                  {/* Trend Pill - Clickable to toggle price chart */}
+                  <motion.button
+                    type="button"
+                    whileTap={{ scale: 0.94 }}
+                    onClick={() => setExpandedItemId(isExpanded ? null : trend.itemId)}
+                    title={isExpanded ? 'Hide price history chart' : 'Show price history chart'}
+                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold shadow-2xs border cursor-pointer hover:opacity-90 transition-all ${
                       isUp
                         ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
                         : isDown
@@ -107,7 +111,7 @@ export function SearchPriceTrendBanner({
                       {isDown && `${trend.percentChange}%`}
                       {!isUp && !isDown && 'Steady'}
                     </span>
-                  </div>
+                  </motion.button>
 
                   {/* Toggle Chart Button */}
                   <motion.button

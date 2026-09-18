@@ -27,10 +27,11 @@ import { FeedbackModal } from './components/FeedbackModal';
 import { SaveBackupModal } from './components/SaveBackupModal';
 import { HowToModal } from './components/HowToModal';
 import { FirstLaunchSyncModal } from './components/FirstLaunchSyncModal';
+import { FirstLaunchCapabilitiesModal } from './components/FirstLaunchCapabilitiesModal';
+import { hasCompletedFirstLaunchCapabilitiesCheck } from './services/onDeviceAiService';
 import { Snackbar } from './components/Snackbar';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { PWAInstallBanner } from './components/PWAInstallBanner';
-import { ScanReceiptModal } from './components/ScanReceiptModal';
 import { ThemePaletteModal } from './components/ThemePaletteModal';
 import { ReceiptCameraScanner } from './components/ReceiptCameraScanner';
 import {
@@ -203,15 +204,17 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedChannel, setSelectedChannel] = useState<'all' | 'Warehouse' | 'Online'>('all');
   const [isSummaryOpen, setIsSummaryOpen] = useState(false);
-  const [isScanReceiptModalOpen, setIsScanReceiptModalOpen] = useState(false);
   const [scannerInitialMode, setScannerInitialMode] = useState<'standard' | 'long'>('standard');
   const [isCameraScannerOpen, setIsCameraScannerOpen] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [settingsInitialTab, setSettingsInitialTab] = useState<'backup' | 'theme' | 'data' | 'about'>('backup');
+  const [settingsInitialTab, setSettingsInitialTab] = useState<'backup' | 'ai' | 'compatibility' | 'theme' | 'data' | 'about'>('backup');
+  const [isInstallGuideOpen, setIsInstallGuideOpen] = useState(false);
   const [isSaveBackupOpen, setIsSaveBackupOpen] = useState(false);
   const [isHowToOpen, setIsHowToOpen] = useState(false);
+  const [howToInitialTab, setHowToInitialTab] = useState<'getting_started' | 'gemini_nano' | 'extension' | 'drive_sync'>('getting_started');
   const [isFirstLaunchSyncOpen, setIsFirstLaunchSyncOpen] = useState(false);
+  const [isFirstLaunchCapabilitiesOpen, setIsFirstLaunchCapabilitiesOpen] = useState(false);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   const [feedbackInitialError, setFeedbackInitialError] = useState<string | null>(null);
   const [selectedReceiptId, setSelectedReceiptId] = useState<string | null>(null);
@@ -259,8 +262,20 @@ export default function App() {
     showAutoPrompt,
     triggerInstall,
     dismissPrompt,
+    markAsAddedToHomeScreen,
     openPromptManually,
   } = usePWAInstall();
+
+  const handleOpenInstall = async () => {
+    if (hasDeferredPrompt) {
+      const outcome = await triggerInstall();
+      if (outcome === 'accepted') {
+        showSnackbar('Reco was installed successfully!', 'PWA Installed');
+        return;
+      }
+    }
+    setIsInstallGuideOpen(true);
+  };
 
   // Direct file inputs
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
@@ -289,21 +304,47 @@ export default function App() {
     }
   }, []);
 
-  // Swipe gesture handling: swipe right opens summary
+  // Swipe gesture handling: swipe right on main dashboard opens summary (only when no modal is open)
   const touchStartXRef = useRef<number>(0);
   const touchStartYRef = useRef<number>(0);
 
+  const isAnyOverlayOpen =
+    isSettingsOpen ||
+    isSummaryOpen ||
+    !!selectedReceiptId ||
+    isCameraScannerOpen ||
+    isUploadModalOpen ||
+    isPaletteModalOpen ||
+    isFeedbackModalOpen ||
+    isHowToOpen ||
+    isInstallGuideOpen ||
+    isSaveBackupOpen ||
+    isFirstLaunchSyncOpen ||
+    isFirstLaunchCapabilitiesOpen;
+
   const handleTouchStart = (e: React.TouchEvent) => {
+    if (isAnyOverlayOpen) {
+      touchStartXRef.current = 0;
+      touchStartYRef.current = 0;
+      return;
+    }
     touchStartXRef.current = e.touches[0].clientX;
     touchStartYRef.current = e.touches[0].clientY;
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
+    if (isAnyOverlayOpen || touchStartXRef.current === 0) {
+      touchStartXRef.current = 0;
+      touchStartYRef.current = 0;
+      return;
+    }
     const deltaX = e.changedTouches[0].clientX - touchStartXRef.current;
     const deltaY = e.changedTouches[0].clientY - touchStartYRef.current;
-    if (deltaX > 60 && Math.abs(deltaX) > Math.abs(deltaY) * 1.3) {
+    if (deltaX > 75 && Math.abs(deltaX) > Math.abs(deltaY) * 1.5) {
       setIsSummaryOpen(true);
     }
+    touchStartXRef.current = 0;
+    touchStartYRef.current = 0;
   };
 
   // Initialize Google Auth state listener on app load
@@ -314,6 +355,16 @@ export default function App() {
         unsubscribe();
       }
     };
+  }, []);
+
+  // Check if first-launch device capabilities check has been performed
+  useEffect(() => {
+    if (!hasCompletedFirstLaunchCapabilitiesCheck()) {
+      const timer = setTimeout(() => {
+        setIsFirstLaunchCapabilitiesOpen(true);
+      }, 700);
+      return () => clearTimeout(timer);
+    }
   }, []);
 
   // Persist receipts locally
@@ -499,6 +550,38 @@ export default function App() {
       console.warn('Failed to clear localStorage:', e);
     }
     showSnackbar('All receipts cleared from this device', 'Cleanup Successful');
+  };
+
+  // Complete factory reset: purge LocalStorage, SessionStorage, CacheStorage, and Service Worker
+  const handleFactoryReset = async () => {
+    try {
+      localStorage.clear();
+      sessionStorage.clear();
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        await Promise.all(cacheNames.map((name) => caches.delete(name)));
+      }
+      if ('indexedDB' in window && typeof indexedDB.databases === 'function') {
+        try {
+          const databases = await indexedDB.databases();
+          databases.forEach((db) => {
+            if (db.name) indexedDB.deleteDatabase(db.name);
+          });
+        } catch {}
+      }
+      if ('serviceWorker' in navigator) {
+        try {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          for (const registration of registrations) {
+            await registration.unregister();
+          }
+        } catch {}
+      }
+    } catch (e) {
+      console.warn('Factory reset error:', e);
+    }
+    setReceipts([]);
+    window.location.href = window.location.origin + window.location.pathname;
   };
 
   // Delete individual receipt from device
@@ -745,7 +828,11 @@ export default function App() {
           setIsFeedbackModalOpen(true);
         }}
         onOpenHowTo={() => setIsHowToOpen(true)}
-        onOpenInstall={openPromptManually}
+        onOpenInstall={handleOpenInstall}
+        onOpenPrivacySettings={() => {
+          setSettingsInitialTab('ai');
+          setIsSettingsOpen(true);
+        }}
       />
 
       {/* Spacious Main Area */}
@@ -848,12 +935,20 @@ export default function App() {
             </div>
           ) : (
             <div className="w-full max-w-md mt-6 space-y-4">
-              <div className="text-xs text-m3-on-surface-variant flex items-center justify-center gap-1.5 pt-1">
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                <span>
+              <button
+                type="button"
+                onClick={() => {
+                  setSettingsInitialTab('ai');
+                  setIsSettingsOpen(true);
+                }}
+                title="View local database and on-device AI status"
+                className="mx-auto text-xs text-m3-on-surface-variant flex items-center justify-center gap-1.5 pt-1 hover:text-m3-primary transition-colors cursor-pointer group"
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform" />
+                <span className="group-hover:underline">
                   {receipts.length} receipt{receipts.length === 1 ? '' : 's'} • {allItems.length} item{allItems.length === 1 ? '' : 's'} indexed on-device
                 </span>
-              </div>
+              </button>
             </div>
           )}
         </main>
@@ -965,6 +1060,7 @@ export default function App() {
                     allItems={allItems}
                     onViewReceipt={(orderId) => setSelectedReceiptId(orderId)}
                     onReEnrich={(itemId, rawName) => handleReEnrichItem(itemId, rawName)}
+                    onSearchKeyword={(keyword) => setSearchQuery(keyword)}
                     isEnriching={!!enrichingItemIds[item.itemId]}
                   />
                 ))}
@@ -980,7 +1076,10 @@ export default function App() {
           {/* M3 Filled Tonal Button */}
           <motion.button
             whileTap={{ scale: 0.96 }}
-            onClick={() => setIsScanReceiptModalOpen(true)}
+            onClick={() => {
+              setScannerInitialMode('standard');
+              setIsCameraScannerOpen(true);
+            }}
             className="flex-1 flex items-center justify-center gap-1.5 sm:gap-2 py-3 px-3 rounded-full bg-m3-secondary-container hover:bg-m3-secondary-container/80 border border-m3-outline-variant/30 text-m3-on-secondary-container text-xs sm:text-sm font-semibold shadow-2xs transition-all cursor-pointer truncate"
             title="Scan receipt with camera"
           >
@@ -1036,13 +1135,15 @@ export default function App() {
           handleReceiptsAdded(restored, msg);
         }}
         onClearAllReceipts={handleClearAllReceipts}
+        onFactoryReset={handleFactoryReset}
         onLoadDemo={handleLoadDemoData}
         onOpenFeedback={() => {
           setFeedbackInitialError(null);
           setIsFeedbackModalOpen(true);
         }}
-        onOpenInstall={openPromptManually}
+        onOpenInstall={handleOpenInstall}
         isInstalled={isInstalled}
+        onOpenDeviceDiagnostics={() => setIsFirstLaunchCapabilitiesOpen(true)}
         onShowSnackbar={(msg, title) => showSnackbar(msg, title || 'Settings')}
       />
 
@@ -1063,7 +1164,7 @@ export default function App() {
         onOpenSaveBackup={() => setIsSaveBackupOpen(true)}
         onClearAllReceipts={handleClearAllReceipts}
         onDeleteReceipt={handleDeleteReceipt}
-        onOpenInstall={openPromptManually}
+        onOpenInstall={handleOpenInstall}
         isInstalled={isInstalled}
         onLoadDemo={handleLoadDemoData}
         isImmersive={isImmersive}
@@ -1080,16 +1181,6 @@ export default function App() {
           handleReceiptsAdded(restored, msg);
         }}
         onShowSnackbar={(msg) => showSnackbar(msg, 'Backup & Sync')}
-      />
-
-      {/* Mode Selection Dialog: Scan Normal Receipt vs Scan Long Receipt */}
-      <ScanReceiptModal
-        isOpen={isScanReceiptModalOpen}
-        onClose={() => setIsScanReceiptModalOpen(false)}
-        onSelectMode={(mode) => {
-          setScannerInitialMode(mode);
-          setIsCameraScannerOpen(true);
-        }}
       />
 
       {/* Detailed Upload Modal (Photo files, JSON, CSV, Demo) */}
@@ -1128,6 +1219,7 @@ export default function App() {
         onClose={() => setIsHowToOpen(false)}
         onOpenUpload={() => setIsUploadModalOpen(true)}
         onOpenSync={() => setIsSaveBackupOpen(true)}
+        initialTab={howToInitialTab}
       />
 
       {/* First Launch Google Drive Sync Prompt Modal */}
@@ -1138,6 +1230,23 @@ export default function App() {
           setIsFirstLaunchSyncOpen(false);
         }}
         onShowSnackbar={(msg) => showSnackbar(msg, 'Google Drive Sync')}
+      />
+
+      {/* First Launch On-Device AI & Capabilities Diagnostic Modal */}
+      <FirstLaunchCapabilitiesModal
+        isOpen={isFirstLaunchCapabilitiesOpen}
+        onClose={() => setIsFirstLaunchCapabilitiesOpen(false)}
+        onOpenHowToGuide={() => {
+          setIsFirstLaunchCapabilitiesOpen(false);
+          setHowToInitialTab('gemini_nano');
+          setIsHowToOpen(true);
+        }}
+        onOpenSettings={() => {
+          setIsFirstLaunchCapabilitiesOpen(false);
+          setSettingsInitialTab('compatibility');
+          setIsSettingsOpen(true);
+        }}
+        onShowSnackbar={(msg, title) => showSnackbar(msg, title)}
       />
 
       {/* Developer Feedback & Bug Report Modal */}
@@ -1156,6 +1265,12 @@ export default function App() {
         hasDeferredPrompt={hasDeferredPrompt}
         onInstall={triggerInstall}
         onDismiss={dismissPrompt}
+        onMarkAlreadyInstalled={() => {
+          markAsAddedToHomeScreen();
+          showSnackbar('Preference saved • Install prompt hidden permanently', 'Home Screen');
+        }}
+        forceOpenGuide={isInstallGuideOpen}
+        onCloseGuide={() => setIsInstallGuideOpen(false)}
       />
 
       {/* PWA Offline Mode Indicator */}

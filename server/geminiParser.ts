@@ -1,23 +1,20 @@
 import { GoogleGenAI, Type } from '@google/genai';
 
-let aiClient: GoogleGenAI | null = null;
-
-function getGeminiClient(): GoogleGenAI {
-  const apiKey = process.env.GEMINI_API_KEY;
+function getGeminiClient(userApiKey?: string): GoogleGenAI {
+  const apiKey = userApiKey || process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    throw new Error('GEMINI_API_KEY is not configured on the server. Please check your environment variables in AI Studio settings.');
+    throw new Error(
+      'Developer billing protection active: No personal Gemini API key provided. Cloud operations are disabled to prevent developer charges. All receipt parsing runs 100% locally on your device via Android On-Device Gemini Nano and local vision OCR.'
+    );
   }
-  if (!aiClient) {
-    aiClient = new GoogleGenAI({
-      apiKey,
-      httpOptions: {
-        headers: {
-          'User-Agent': 'aistudio-build',
-        },
+  return new GoogleGenAI({
+    apiKey,
+    httpOptions: {
+      headers: {
+        'User-Agent': 'aistudio-build',
       },
-    });
-  }
-  return aiClient;
+    },
+  });
 }
 
 export interface ImagePayload {
@@ -31,6 +28,7 @@ export interface ParseReceiptParams {
   mimeType?: string;
   fileName?: string;
   images?: ImagePayload[];
+  userApiKey?: string;
 }
 
 export interface ParsedAiItem {
@@ -126,8 +124,9 @@ export async function parseReceiptWithGemini({
   mimeType = 'image/jpeg',
   fileName,
   images,
+  userApiKey,
 }: ParseReceiptParams): Promise<ParsedAiReceiptResult> {
-  const ai = getGeminiClient();
+  const ai = getGeminiClient(userApiKey);
 
   // Normalize image inputs into an array of inlineData objects
   const rawList: ImagePayload[] = [];
