@@ -4,7 +4,6 @@ import {
   ChevronRight,
   MessageSquarePlus,
   HelpCircle,
-  Download,
   X,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -14,21 +13,38 @@ interface HeaderProps {
   receipts: CostcoReceipt[];
   items: CostcoItem[];
   isInstalled?: boolean;
+  isDesktop?: boolean;
+  hasSearchQuery?: boolean;
+  onResetSearch?: () => void;
+  onOpenScan?: () => void;
+  onOpenUpload?: () => void;
+  onOpenSettings?: () => void;
   onOpenSummary: () => void;
   onOpenFeedback: () => void;
   onOpenHowTo: () => void;
   onOpenInstall?: () => void;
   onOpenPrivacySettings?: () => void;
+  onToggleViewMode?: () => void;
+  currentViewMode?: 'auto' | 'desktop' | 'mobile';
 }
 
 export function Header({
+  receipts,
   items,
   isInstalled,
+  isDesktop = false,
+  hasSearchQuery = false,
+  onResetSearch,
+  onOpenScan,
+  onOpenUpload,
+  onOpenSettings,
   onOpenSummary,
   onOpenFeedback,
   onOpenHowTo,
   onOpenInstall,
   onOpenPrivacySettings,
+  onToggleViewMode,
+  currentViewMode = 'auto',
 }: HeaderProps) {
   const [showSecurityTooltip, setShowSecurityTooltip] = useState(false);
   const securityTimerRef = useRef<number | null>(null);
@@ -70,26 +86,29 @@ export function Header({
   }, []);
 
   return (
-    <header className="border-b border-m3-outline-variant/30 bg-m3-background/95 backdrop-blur-md sticky top-0 z-30 transition-colors pt-[env(safe-area-inset-top,0px)] px-3 sm:px-6 md:px-8">
-      <div className="max-w-4xl mx-auto py-2.5 flex items-center justify-between gap-2 sm:gap-4">
-        {/* Top Left: Privacy, How To Guide & Install */}
-        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
-          {/* Privacy/Security Shield Indicator */}
+    <header className="border-b border-m3-outline-variant/30 bg-m3-background/95 backdrop-blur-md sticky top-0 z-30 transition-colors pt-[env(safe-area-inset-top,0px)] px-3 sm:px-6 lg:px-8">
+      <div className="w-full max-w-7xl mx-auto py-2.5 sm:py-3 md:py-3.5 flex items-center justify-between gap-3 sm:gap-4">
+        {/* Left: All tool and status icons in requested order: Privacy, How To, Feedback */}
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          {/* 1. Privacy/Security Shield Indicator with On-Device Pill */}
           <div className="relative" ref={tooltipContainerRef}>
             <motion.button
               whileTap={{ scale: 0.92 }}
               id="privacy-security-indicator-btn"
               onClick={handleToggleSecurityInfo}
-              className={`p-2 rounded-full transition-all cursor-pointer flex items-center justify-center ${
+              className={`p-1.5 sm:px-3 sm:py-1.5 rounded-full transition-all cursor-pointer flex items-center gap-1.5 text-xs font-semibold ${
                 showSecurityTooltip
                   ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 ring-2 ring-emerald-500/40'
-                  : 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10'
+                  : 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20'
               }`}
-              title={showSecurityTooltip ? 'Hide Privacy Info' : 'Privacy & Data Security (Tap for on-device status)'}
+              title={showSecurityTooltip ? 'Hide Privacy Info' : 'Privacy & Data Security (100% On-Device)'}
               aria-label="Privacy and data security information"
               aria-expanded={showSecurityTooltip}
             >
-              <ShieldCheck className="w-5 h-5 shrink-0" />
+              <ShieldCheck className="w-4 h-4 md:w-4.5 md:h-4.5 shrink-0 text-emerald-500" />
+              <span className="hidden sm:inline text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+                100% On-Device
+              </span>
             </motion.button>
 
             <AnimatePresence>
@@ -142,78 +161,47 @@ export function Header({
             </AnimatePresence>
           </div>
 
-          {/* How To / Help Guide Button */}
+          {/* 2. How To / Help Guide Button */}
           <motion.button
             whileTap={{ scale: 0.92 }}
             id="howto-guide-header-btn"
             onClick={onOpenHowTo}
-            className="p-2 rounded-full text-m3-on-surface-variant hover:text-m3-primary hover:bg-m3-surface-container-highest transition-colors cursor-pointer flex items-center justify-center"
+            className="w-9 h-9 md:w-10 md:h-10 rounded-full text-m3-on-surface-variant hover:text-m3-primary hover:bg-m3-surface-container-highest transition-colors cursor-pointer flex items-center justify-center border border-m3-outline-variant/30 shadow-2xs"
             title="How to Use Reco & Chrome Extension Guide"
             aria-label="How to Use Guide"
           >
-            <HelpCircle className="w-5 h-5 text-m3-primary" />
+            <HelpCircle className="w-4.5 h-4.5 md:w-5 md:h-5 text-m3-primary" />
           </motion.button>
 
-          {/* Quick Install App Button in Header */}
-          {onOpenInstall && (
-            <>
-              <motion.button
-                whileTap={{ scale: 0.94 }}
-                id="header-install-app-btn"
-                onClick={onOpenInstall}
-                className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-m3-primary text-m3-on-primary hover:bg-m3-primary/90 text-xs font-semibold shadow-xs transition-all cursor-pointer ml-1"
-                title="Install Reco to Homescreen & App Drawer"
-              >
-                <Download className="w-3.5 h-3.5 shrink-0" />
-                <span>{isInstalled ? 'App Installed' : 'Install App'}</span>
-              </motion.button>
-              <motion.button
-                whileTap={{ scale: 0.92 }}
-                id="header-install-app-mobile-btn"
-                onClick={onOpenInstall}
-                className="sm:hidden p-2 rounded-full text-m3-primary hover:bg-m3-primary/10 transition-colors cursor-pointer flex items-center justify-center"
-                title={isInstalled ? 'App is Installed' : 'Install Reco App'}
-                aria-label="Install App"
-              >
-                <Download className="w-4.5 h-4.5" />
-              </motion.button>
-            </>
-          )}
-        </div>
-
-        {/* Right Actions: Feedback & Summary Button */}
-        <div className="flex items-center gap-1.5 shrink-0 pl-1">
-          {/* Feedback & Bug Report - M3 Standard Icon Button (Always visible on all screen sizes) */}
+          {/* 3. Feedback & Bug Report Button */}
           <motion.button
             whileTap={{ scale: 0.92 }}
+            id="feedback-header-btn"
             onClick={onOpenFeedback}
-            className="inline-flex p-2 rounded-full text-m3-on-surface-variant hover:text-m3-primary hover:bg-m3-surface-container-highest transition-colors cursor-pointer"
+            className="w-9 h-9 md:w-10 md:h-10 rounded-full text-m3-on-surface-variant hover:text-m3-primary hover:bg-m3-surface-container-highest transition-colors cursor-pointer flex items-center justify-center border border-m3-outline-variant/30 shadow-2xs"
             title="Send Feedback or Report Bug to developer"
             aria-label="Send feedback"
           >
-            <MessageSquarePlus className="w-4 h-4" />
+            <MessageSquarePlus className="w-4 h-4 md:w-4.5 md:h-4.5 text-m3-on-surface-variant" />
           </motion.button>
+        </div>
 
-          {/* Summary Button - Material 3 Filled Tonal Button with Badge & Spring Animation */}
+        {/* Right: Summary pill ONLY */}
+        <div className="flex items-center shrink-0">
           <motion.button
             whileTap={{ scale: 0.94 }}
+            id="header-summary-btn"
             onClick={onOpenSummary}
-            className="inline-flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 ml-1 rounded-full bg-m3-secondary-container hover:bg-m3-secondary-container/85 text-m3-on-secondary-container text-xs font-semibold transition-all cursor-pointer border border-m3-outline-variant/30 shadow-2xs shrink-0"
-            title="View summary and purchase statistics"
+            className="inline-flex items-center gap-2 px-3.5 sm:px-4 md:px-4.5 py-1.5 sm:py-2 md:py-2.5 rounded-full bg-m3-secondary-container hover:bg-m3-secondary-container/85 text-m3-on-secondary-container text-xs sm:text-sm font-semibold border border-m3-outline-variant/40 shadow-2xs hover:shadow-xs transition-all cursor-pointer shrink-0"
+            title="View spending summary and reward analytics (Press M)"
+            aria-label="View spending summary and reward analytics"
           >
-            <span>Summary</span>
+            <span className="font-semibold">Summary</span>
             {items.length > 0 && (
-              <motion.span
-                key={items.length}
-                initial={{ scale: 0.8 }}
-                animate={{ scale: 1 }}
-                transition={{ type: 'spring', stiffness: 500, damping: 25 }}
-                className="px-1.5 py-0.5 bg-m3-primary text-m3-on-primary text-[10px] rounded-full font-mono font-bold leading-none shadow-2xs"
-              >
+              <span className="px-2 py-0.5 bg-m3-primary text-m3-on-primary text-[10px] md:text-xs rounded-full font-mono font-bold leading-none shadow-2xs">
                 {items.length}
-              </motion.span>
+              </span>
             )}
-            <ChevronRight className="w-3.5 h-3.5 opacity-75" />
           </motion.button>
         </div>
       </div>

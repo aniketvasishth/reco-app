@@ -1,83 +1,49 @@
+
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <linearGradient id="maskBg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#1E60D5" />
-      <stop offset="50%" stop-color="#144AB2" />
-      <stop offset="100%" stop-color="#0E3589" />
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#240b13" />
+      <stop offset="50%" stop-color="#19060d" />
+      <stop offset="100%" stop-color="#120409" />
     </linearGradient>
-    <linearGradient id="maskReceipt" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#FFFFFF" />
-      <stop offset="100%" stop-color="#F1F5F9" />
+
+    <linearGradient id="glowGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#b32b43" stop-opacity="0.25" />
+      <stop offset="100%" stop-color="#ffb2bc" stop-opacity="0.0" />
     </linearGradient>
-    <linearGradient id="maskBeam" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#38BDF8" stop-opacity="0" />
-      <stop offset="30%" stop-color="#38BDF8" stop-opacity="0.9" />
-      <stop offset="70%" stop-color="#60A5FA" stop-opacity="0.9" />
-      <stop offset="100%" stop-color="#60A5FA" stop-opacity="0" />
+
+    <linearGradient id="textDarkGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="60%" stop-color="#ffeef1" />
+      <stop offset="100%" stop-color="#ffb6c1" />
     </linearGradient>
-    <filter id="maskShadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#071940" flood-opacity="0.35" />
+
+    <filter id="dropShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#000000" flood-opacity="0.55" />
     </filter>
   </defs>
 
-  <!-- Full-bleed background for Android Adaptive Masking -->
-  <rect width="512" height="512" fill="url(#maskBg)" />
+  <!-- Background container -->
+  <rect width="512" height="512" rx="0" fill="url(#bgGrad)" />
+
+  <!-- Material 3 Subtle Ambient Center Glow -->
+  <circle cx="256" cy="256" r="175" fill="url(#glowGrad)" />
+
+  <!-- Inner Soft Card outline for depth (non-maskable only) -->
   
-  <circle cx="256" cy="256" r="150" fill="#60A5FA" fill-opacity="0.12" />
 
-  <!-- Main Receipt Card in Safe Center Area -->
-  <g filter="url(#maskShadow)">
-    <path d="M 164 124 
-             L 348 124 
-             Q 356 124 356 132 
-             L 356 368 
-             L 340 356 
-             L 324 368 
-             L 308 356 
-             L 292 368 
-             L 276 356 
-             L 260 368 
-             L 244 356 
-             L 228 368 
-             L 212 356 
-             L 196 368 
-             L 180 356 
-             L 164 368 
-             L 156 362 
-             L 156 132 
-             Q 156 124 164 124 Z" 
-          fill="url(#maskReceipt)" />
-
-    <!-- Receipt Header Badge "RECO" -->
-    <rect x="186" y="148" width="140" height="32" rx="7" fill="#144AB2" />
-    <text x="256" y="171" 
-          font-family="system-ui, -apple-system, sans-serif" 
-          font-weight="900" 
-          font-size="19" 
-          fill="#FFFFFF" 
-          letter-spacing="2.5" 
-          text-anchor="middle" 
-          dominant-baseline="central">RECO</text>
-
-    <!-- Receipt Item Lines -->
-    <rect x="182" y="202" width="100" height="9" rx="4.5" fill="#64748B" />
-    <rect x="300" y="202" width="28" height="9" rx="4.5" fill="#0F172A" />
-
-    <rect x="182" y="226" width="82" height="9" rx="4.5" fill="#94A3B8" />
-    <rect x="300" y="226" width="28" height="9" rx="4.5" fill="#0F172A" />
-
-    <rect x="182" y="250" width="108" height="9" rx="4.5" fill="#64748B" />
-    <rect x="300" y="250" width="28" height="9" rx="4.5" fill="#0F172A" />
-
-    <!-- Dotted Divider Line -->
-    <line x1="180" y1="278" x2="330" y2="278" stroke="#CBD5E1" stroke-width="2.5" stroke-dasharray="6 4" stroke-linecap="round" />
-
-    <!-- Total Row -->
-    <rect x="182" y="296" width="54" height="12" rx="6" fill="#1E293B" />
-    <rect x="286" y="294" width="42" height="15" rx="6" fill="#144AB2" />
-
-    <!-- Scanning Laser Beam -->
-    <rect x="136" y="238" width="240" height="5" rx="2.5" fill="url(#maskBeam)" />
-    <circle cx="256" cy="240" r="4.5" fill="#FFFFFF" />
+  <!-- Pure, Clean Reco Wordmark -->
+  <g filter="url(#dropShadow)">
+    <text
+      x="256"
+      y="262"
+      font-family="-apple-system, BlinkMacSystemFont, 'Plus Jakarta Sans', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+      font-size="140"
+      font-weight="800"
+      letter-spacing="-2"
+      text-anchor="middle"
+      dominant-baseline="central"
+      fill="url(#textDarkGrad)"
+    >Reco</text>
   </g>
 </svg>

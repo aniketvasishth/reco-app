@@ -79,7 +79,7 @@ export function ItemCard({
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={M3_TRANSITIONS.emphasizedEnter}
       whileHover={{ y: -2 }}
-      className={`rounded-3xl border m3-elevation-transition p-4 sm:p-5 flex flex-col justify-between group relative overflow-hidden ${
+      className={`rounded-3xl border m3-elevation-transition p-4 sm:p-5 md:p-6 flex flex-col justify-between group relative overflow-hidden ${
         isReturn
           ? 'bg-m3-error-container/15 border-m3-error/30 hover:border-m3-error/50 hover:shadow-md'
           : 'bg-m3-surface-container-lowest dark:bg-m3-surface-container-low border-m3-outline-variant/50 hover:border-m3-outline/60 hover:shadow-md'
@@ -87,7 +87,7 @@ export function ItemCard({
     >
       {/* Top row: Item ID badge & Channel Badge */}
       <div>
-        <div className="flex items-center justify-between gap-2 mb-2">
+        <div className="flex items-center justify-between gap-2 mb-2.5">
           
           {/* Costco Item ID with 1-click Copy & M3 Ripple */}
           <div className="flex items-center gap-1.5 flex-wrap">
@@ -97,14 +97,14 @@ export function ItemCard({
               onPointerDown={onTagDown}
               onClick={copyItemId}
               title="Click to copy Costco Item ID"
-              className={`relative overflow-hidden inline-flex items-center gap-1 px-2.5 py-1 rounded-lg font-mono text-xs font-semibold border transition-all cursor-pointer ${
+              className={`relative overflow-hidden inline-flex items-center gap-1.5 px-2.5 md:px-3 py-1 md:py-1.5 rounded-lg font-mono text-xs md:text-sm font-semibold border transition-all cursor-pointer ${
                 isReturn
                   ? 'bg-m3-error-container/40 text-m3-error dark:text-[#ffb4ab] border-m3-error/30 hover:bg-m3-error-container/60'
                   : 'bg-m3-secondary-container text-m3-on-secondary-container hover:bg-m3-secondary-container/80 border-m3-outline-variant/40'
               }`}
             >
               {renderTagRipples()}
-              <Tag className={`w-3 h-3 ${isReturn ? 'text-m3-error dark:text-[#ffb4ab]' : 'text-m3-primary'}`} />
+              <Tag className={`w-3.5 h-3.5 ${isReturn ? 'text-m3-error dark:text-[#ffb4ab]' : 'text-m3-primary'}`} />
               <span>ITEM #{item.itemId}</span>
               <AnimatePresence mode="wait">
                 {copied ? (
@@ -115,7 +115,7 @@ export function ItemCard({
                     exit={{ scale: 0 }}
                     transition={M3_TRANSITIONS.snappySpring}
                   >
-                    <Check className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                    <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                   </motion.span>
                 ) : (
                   <motion.span
@@ -124,7 +124,7 @@ export function ItemCard({
                     animate={{ scale: 1 }}
                     exit={{ scale: 0 }}
                   >
-                    <Copy className="w-3 h-3 opacity-60 group-hover:opacity-100" />
+                    <Copy className="w-3.5 h-3.5 opacity-60 group-hover:opacity-100" />
                   </motion.span>
                 )}
               </AnimatePresence>
@@ -138,7 +138,7 @@ export function ItemCard({
                   if (onSearchKeyword && item.category) onSearchKeyword(item.category);
                 }}
                 title={`Filter items by category: ${item.category}`}
-                className={`inline-block px-2.5 py-0.5 rounded-md text-[11px] font-medium border cursor-pointer hover:opacity-85 transition-opacity ${
+                className={`inline-block px-2.5 md:px-3 py-0.5 md:py-1 rounded-md text-[11px] md:text-xs font-medium border cursor-pointer hover:opacity-85 transition-opacity ${
                   isReturn
                     ? 'bg-m3-error-container/30 text-m3-error dark:text-[#ffb4ab] border-m3-error/20'
                     : 'bg-m3-surface-container text-m3-on-surface-variant border-m3-outline-variant/40'
@@ -159,9 +159,9 @@ export function ItemCard({
                   onViewReceipt(item.orderId);
                 }}
                 title="View return receipt"
-                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-m3-error-container text-m3-on-error-container border border-m3-error/30 shadow-2xs cursor-pointer hover:opacity-90"
+                className="inline-flex items-center gap-1 px-2.5 md:px-3 py-0.5 md:py-1 rounded-full text-[11px] md:text-xs font-bold bg-m3-error-container text-m3-on-error-container border border-m3-error/30 shadow-2xs cursor-pointer hover:opacity-90"
               >
-                <RotateCcw className="w-3 h-3 text-m3-error dark:text-[#ffb4ab]" />
+                <RotateCcw className="w-3.5 h-3.5 text-m3-error dark:text-[#ffb4ab]" />
                 Return
               </button>
             )}
@@ -173,9 +173,9 @@ export function ItemCard({
                   if (onSearchKeyword) onSearchKeyword('Costco.com');
                 }}
                 title="Filter online purchases"
-                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-m3-surface-container text-m3-on-surface-variant border border-m3-outline-variant/50 cursor-pointer hover:bg-m3-surface-container-high transition-colors"
+                className="inline-flex items-center gap-1.5 px-2.5 md:px-3 py-0.5 md:py-1 rounded-full text-[11px] md:text-xs font-semibold bg-m3-surface-container text-m3-on-surface-variant border border-m3-outline-variant/50 cursor-pointer hover:bg-m3-surface-container-high transition-colors"
               >
-                <Globe className="w-3 h-3 text-m3-tertiary" />
+                <Globe className="w-3.5 h-3.5 text-m3-tertiary" />
                 Online
               </button>
             ) : (
@@ -186,9 +186,9 @@ export function ItemCard({
                   if (onSearchKeyword && item.warehouseLocation) onSearchKeyword(item.warehouseLocation);
                 }}
                 title={`Filter items from ${item.warehouseLocation || 'Warehouse'}`}
-                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-m3-surface-container text-m3-on-surface-variant border border-m3-outline-variant/50 cursor-pointer hover:bg-m3-surface-container-high transition-colors"
+                className="inline-flex items-center gap-1.5 px-2.5 md:px-3 py-0.5 md:py-1 rounded-full text-[11px] md:text-xs font-semibold bg-m3-surface-container text-m3-on-surface-variant border border-m3-outline-variant/50 cursor-pointer hover:bg-m3-surface-container-high transition-colors"
               >
-                <Store className="w-3 h-3 text-m3-primary" />
+                <Store className="w-3.5 h-3.5 text-m3-primary" />
                 Warehouse
               </button>
             )}
@@ -196,7 +196,7 @@ export function ItemCard({
         </div>
 
         {/* Product Title */}
-        <h3 className={`text-base font-bold leading-snug transition-colors ${
+        <h3 className={`text-base md:text-lg font-bold leading-snug transition-colors ${
           isReturn
             ? 'text-m3-on-surface group-hover:text-m3-error dark:group-hover:text-[#ffb4ab]'
             : 'text-m3-on-surface group-hover:text-m3-primary'
@@ -206,7 +206,7 @@ export function ItemCard({
 
         {/* Brand & Package Specs */}
         {(item.brand || item.packageDetails) && (
-          <div className="flex items-center gap-2 mt-1 text-xs text-m3-on-surface-variant">
+          <div className="flex items-center gap-2 mt-1.5 text-xs md:text-sm text-m3-on-surface-variant">
             {item.brand && (
               <button
                 type="button"
@@ -227,14 +227,14 @@ export function ItemCard({
 
         {/* Raw receipt abbreviation text if different */}
         {item.productName && item.rawName && item.productName !== item.rawName && (
-          <p className="text-[11px] text-m3-on-surface-variant/80 font-mono mt-0.5">
+          <p className="text-[11px] md:text-xs text-m3-on-surface-variant/80 font-mono mt-0.5">
             Receipt: {item.rawName}
           </p>
         )}
 
         {/* Web Search Identification Description */}
         {item.description && (
-          <p className={`mt-2 text-xs line-clamp-2 leading-relaxed p-2.5 rounded-2xl border ${
+          <p className={`mt-2.5 text-xs md:text-sm line-clamp-2 leading-relaxed p-2.5 md:p-3 rounded-2xl border ${
             isReturn
               ? 'bg-m3-error-container/20 text-m3-on-surface-variant border-m3-error/20'
               : 'bg-m3-surface-container text-m3-on-surface-variant border-m3-outline-variant/40'
@@ -245,7 +245,7 @@ export function ItemCard({
       </div>
 
       {/* Primary Purchase Details: When, Amount, Location, Card (All Interactive Chips) */}
-      <div className={`mt-3 pt-3 border-t grid grid-cols-2 gap-2 text-xs ${
+      <div className={`mt-3.5 pt-3 md:pt-3.5 border-t grid grid-cols-2 gap-2 md:gap-2.5 text-xs md:text-sm ${
         isReturn ? 'border-m3-error/20' : 'border-m3-outline-variant/40'
       }`}>
         
@@ -259,14 +259,14 @@ export function ItemCard({
             onViewReceipt(item.orderId);
           }}
           title="View receipt for this purchase date"
-          className={`relative overflow-hidden flex items-center gap-2 p-2 rounded-xl text-left cursor-pointer transition-all hover:ring-1 hover:ring-m3-primary/30 ${
+          className={`relative overflow-hidden flex items-center gap-2 p-2 md:p-2.5 rounded-xl text-left cursor-pointer transition-all hover:ring-1 hover:ring-m3-primary/30 ${
             isReturn ? 'bg-m3-error-container/20' : 'bg-m3-surface-container-low dark:bg-m3-surface-container'
           }`}
         >
           {renderDateRipples()}
-          <Calendar className="w-3.5 h-3.5 text-m3-primary shrink-0" />
+          <Calendar className="w-4 h-4 text-m3-primary shrink-0" />
           <div className="truncate">
-            <span className="text-[10px] uppercase font-bold text-m3-on-surface-variant block tracking-wider">
+            <span className="text-[10px] md:text-[11px] uppercase font-bold text-m3-on-surface-variant block tracking-wider">
               Date
             </span>
             <span className="font-semibold text-m3-on-surface">
@@ -285,18 +285,18 @@ export function ItemCard({
             onViewReceipt(item.orderId);
           }}
           title="View receipt breakdown for this amount"
-          className={`relative overflow-hidden flex items-center gap-2 p-2 rounded-xl text-left cursor-pointer transition-all hover:ring-1 hover:ring-emerald-500/30 ${
+          className={`relative overflow-hidden flex items-center gap-2 p-2 md:p-2.5 rounded-xl text-left cursor-pointer transition-all hover:ring-1 hover:ring-emerald-500/30 ${
             isReturn ? 'bg-m3-error-container/30' : 'bg-m3-surface-container-low dark:bg-m3-surface-container'
           }`}
         >
           {renderPaidRipples()}
           {isReturn ? (
-            <RotateCcw className="w-3.5 h-3.5 text-m3-error dark:text-[#ffb4ab] shrink-0" />
+            <RotateCcw className="w-4 h-4 text-m3-error dark:text-[#ffb4ab] shrink-0" />
           ) : (
-            <ShoppingBag className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            <ShoppingBag className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
           )}
           <div className="truncate">
-            <span className="text-[10px] uppercase font-bold text-m3-on-surface-variant block tracking-wider">
+            <span className="text-[10px] md:text-[11px] uppercase font-bold text-m3-on-surface-variant block tracking-wider">
               {isReturn ? 'Refunded' : 'Paid'}
             </span>
             <div className="flex items-baseline gap-1">
@@ -306,7 +306,7 @@ export function ItemCard({
                 {isReturn ? `-$${Math.abs(item.totalPrice).toFixed(2)}` : `$${item.totalPrice.toFixed(2)}`}
               </span>
               {item.quantity > 1 && (
-                <span className="text-[10px] text-m3-on-surface-variant">
+                <span className="text-[10px] md:text-xs text-m3-on-surface-variant">
                   (×{item.quantity})
                 </span>
               )}
@@ -328,16 +328,16 @@ export function ItemCard({
             }
           }}
           title={`Filter items from ${item.warehouseLocation || 'this location'}`}
-          className="relative overflow-hidden flex items-center gap-2 bg-m3-surface-container-low dark:bg-m3-surface-container p-2 rounded-xl text-left cursor-pointer transition-all hover:ring-1 hover:ring-m3-primary/30"
+          className="relative overflow-hidden flex items-center gap-2 bg-m3-surface-container-low dark:bg-m3-surface-container p-2 md:p-2.5 rounded-xl text-left cursor-pointer transition-all hover:ring-1 hover:ring-m3-primary/30"
         >
           {renderStoreRipples()}
           {isOnline ? (
-            <Globe className="w-3.5 h-3.5 text-m3-tertiary shrink-0" />
+            <Globe className="w-4 h-4 text-m3-tertiary shrink-0" />
           ) : (
-            <Store className="w-3.5 h-3.5 text-m3-primary shrink-0" />
+            <Store className="w-4 h-4 text-m3-primary shrink-0" />
           )}
           <div className="truncate">
-            <span className="text-[10px] uppercase font-bold text-m3-on-surface-variant block tracking-wider">
+            <span className="text-[10px] md:text-[11px] uppercase font-bold text-m3-on-surface-variant block tracking-wider">
               Store
             </span>
             <span className="font-semibold text-m3-on-surface block truncate" title={item.warehouseLocation}>
@@ -360,12 +360,12 @@ export function ItemCard({
             }
           }}
           title={`Filter items paid with ${item.paymentCard || 'this card'}`}
-          className="relative overflow-hidden flex items-center gap-2 bg-m3-surface-container-low dark:bg-m3-surface-container p-2 rounded-xl text-left cursor-pointer transition-all hover:ring-1 hover:ring-amber-500/30"
+          className="relative overflow-hidden flex items-center gap-2 bg-m3-surface-container-low dark:bg-m3-surface-container p-2 md:p-2.5 rounded-xl text-left cursor-pointer transition-all hover:ring-1 hover:ring-amber-500/30"
         >
           {renderCardRipples()}
-          <CreditCard className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400 shrink-0" />
+          <CreditCard className="w-4 h-4 text-amber-500 dark:text-amber-400 shrink-0" />
           <div className="truncate">
-            <span className="text-[10px] uppercase font-bold text-m3-on-surface-variant block tracking-wider">
+            <span className="text-[10px] md:text-[11px] uppercase font-bold text-m3-on-surface-variant block tracking-wider">
               Card
             </span>
             <span className="font-semibold text-m3-on-surface block truncate" title={item.paymentCard || 'Card on file'}>
@@ -376,15 +376,15 @@ export function ItemCard({
       </div>
 
       {/* Card Footer */}
-      <div className="mt-2.5 pt-2 border-t border-m3-outline-variant/30 flex items-center justify-between text-xs">
+      <div className="mt-3 pt-2.5 border-t border-m3-outline-variant/30 flex items-center justify-between text-xs sm:text-sm">
         <motion.button
           whileTap={{ scale: 0.94 }}
           onPointerDown={onReceiptDown}
           onClick={() => onViewReceipt(item.orderId)}
-          className="relative overflow-hidden inline-flex items-center gap-1.5 text-xs font-semibold text-m3-primary hover:text-m3-primary/80 transition-colors cursor-pointer py-1 px-2.5 rounded-full hover:bg-m3-primary/10"
+          className="relative overflow-hidden inline-flex items-center gap-1.5 font-semibold text-m3-primary hover:text-m3-primary/80 transition-colors cursor-pointer py-1.5 px-3 md:py-2 md:px-3.5 rounded-full hover:bg-m3-primary/10"
         >
           {renderReceiptRipples()}
-          <Receipt className="w-3.5 h-3.5" />
+          <Receipt className="w-4 h-4" />
           <span>View Receipt</span>
         </motion.button>
 
@@ -393,10 +393,10 @@ export function ItemCard({
           onPointerDown={onEnrichDown}
           onClick={() => onReEnrich(item.itemId, item.rawName)}
           disabled={isEnriching}
-          className="relative overflow-hidden inline-flex items-center gap-1 text-[11px] text-m3-on-surface-variant hover:text-m3-on-surface transition-colors cursor-pointer py-1 px-2.5 rounded-full hover:bg-m3-surface-container-highest"
+          className="relative overflow-hidden inline-flex items-center gap-1.5 text-m3-on-surface-variant hover:text-m3-on-surface transition-colors cursor-pointer py-1.5 px-3 md:py-2 md:px-3.5 rounded-full hover:bg-m3-surface-container-highest"
         >
           {renderEnrichRipples()}
-          <RefreshCw className={`w-3 h-3 ${isEnriching ? 'animate-spin text-m3-primary' : ''}`} />
+          <RefreshCw className={`w-3.5 h-3.5 ${isEnriching ? 'animate-spin text-m3-primary' : ''}`} />
           <span>{isEnriching ? 'Updating...' : 'Refresh Info'}</span>
         </motion.button>
       </div>

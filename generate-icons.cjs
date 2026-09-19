@@ -6,11 +6,17 @@ const sharp = require('sharp');
 const darkSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
     <linearGradient id="bgDark" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#2a141b" />
-      <stop offset="100%" stop-color="#1c0b11" />
+      <stop offset="0%" stop-color="#240b13" />
+      <stop offset="50%" stop-color="#19060d" />
+      <stop offset="100%" stop-color="#120409" />
+    </linearGradient>
+    <linearGradient id="textDarkGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="60%" stop-color="#ffeef1" />
+      <stop offset="100%" stop-color="#ffb6c1" />
     </linearGradient>
     <filter id="shadowDark" x="-10%" y="-10%" width="125%" height="125%">
-      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#000000" flood-opacity="0.5" />
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#000000" flood-opacity="0.55" />
     </filter>
   </defs>
 
@@ -18,16 +24,21 @@ const darkSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" w
   <rect width="512" height="512" rx="116" fill="url(#bgDark)" />
 
   <!-- Subtle aesthetic background glow -->
-  <circle cx="256" cy="256" r="160" fill="#ffb2bc" fill-opacity="0.04" />
+  <circle cx="256" cy="256" r="175" fill="#b32b43" fill-opacity="0.25" />
 
   <!-- Centered "Reco" Brand Signature -->
-  <g transform="translate(256, 275)" filter="url(#shadowDark)">
-    <text x="-48" y="0" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="150" font-weight="900" letter-spacing="-4" text-anchor="middle" fill="#FFE0E4">Rec</text>
-    <text x="86" y="0" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="150" font-weight="900" letter-spacing="-4" text-anchor="middle" fill="#FFB2BC">o</text>
-    
-    <!-- Orbiting Accent Ring above "o" -->
-    <circle cx="140" cy="-78" r="18" fill="none" stroke="#FFB2BC" stroke-width="5" stroke-dasharray="64 32" opacity="0.9" />
-    <circle cx="140" cy="-78" r="6" fill="#FFB2BC" opacity="0.95" />
+  <g filter="url(#shadowDark)">
+    <text
+      x="256"
+      y="262"
+      font-family="-apple-system, BlinkMacSystemFont, 'Plus Jakarta Sans', 'Segoe UI', Roboto, sans-serif"
+      font-size="156"
+      font-weight="800"
+      letter-spacing="-2"
+      text-anchor="middle"
+      dominant-baseline="central"
+      fill="url(#textDarkGrad)"
+    >Reco</text>
   </g>
 </svg>`;
 
@@ -35,24 +46,38 @@ const lightSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" 
   <defs>
     <linearGradient id="bgLight" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#FFFFFF" />
-      <stop offset="100%" stop-color="#FFF0F3" />
+      <stop offset="50%" stop-color="#FFF0F3" />
+      <stop offset="100%" stop-color="#FFE4E9" />
+    </linearGradient>
+    <linearGradient id="textLightGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2d0a14" />
+      <stop offset="70%" stop-color="#3d0e1b" />
+      <stop offset="100%" stop-color="#801b33" />
     </linearGradient>
     <filter id="shadowLight" x="-10%" y="-10%" width="125%" height="125%">
-      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#8c1d40" flood-opacity="0.15" />
+      <feDropShadow dx="0" dy="5" stdDeviation="8" flood-color="#78253b" flood-opacity="0.2" />
     </filter>
   </defs>
 
   <!-- Squircle canvas -->
   <rect width="512" height="512" rx="116" fill="url(#bgLight)" stroke="#ffd9e0" stroke-width="2" />
 
+  <!-- Subtle aesthetic background glow -->
+  <circle cx="256" cy="256" r="175" fill="#ffb2bc" fill-opacity="0.35" />
+
   <!-- Centered "Reco" Brand Signature -->
-  <g transform="translate(256, 275)" filter="url(#shadowLight)">
-    <text x="-48" y="0" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="150" font-weight="900" letter-spacing="-4" text-anchor="middle" fill="#26161B">Rec</text>
-    <text x="86" y="0" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="150" font-weight="900" letter-spacing="-4" text-anchor="middle" fill="#B32B43">o</text>
-    
-    <!-- Orbiting Accent Ring above "o" -->
-    <circle cx="140" cy="-78" r="18" fill="none" stroke="#B32B43" stroke-width="5" stroke-dasharray="64 32" opacity="0.9" />
-    <circle cx="140" cy="-78" r="6" fill="#B32B43" opacity="0.95" />
+  <g filter="url(#shadowLight)">
+    <text
+      x="256"
+      y="262"
+      font-family="-apple-system, BlinkMacSystemFont, 'Plus Jakarta Sans', 'Segoe UI', Roboto, sans-serif"
+      font-size="156"
+      font-weight="800"
+      letter-spacing="-2"
+      text-anchor="middle"
+      dominant-baseline="central"
+      fill="url(#textLightGrad)"
+    >Reco</text>
   </g>
 </svg>`;
 

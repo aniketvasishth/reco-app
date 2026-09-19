@@ -95,7 +95,7 @@ export function SplashScreen({ onComplete, isDarkMode = true, activePaletteId }:
               className="text-xs font-semibold tracking-[0.22em] uppercase font-mono"
               style={{ color: subtextColor }}
             >
-              Wholesale Receipt Search
+              Costco Wholesale Receipt Search
             </motion.p>
           </div>
 

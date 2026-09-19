@@ -1,5 +1,5 @@
 // Reco PWA Service Worker for Offline Receipt Indexing & Android WebAPK Standalone Support
-const CACHE_NAME = 'reco-pwa-v9';
+const CACHE_NAME = 'reco-pwa-v11';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -10,6 +10,7 @@ const STATIC_ASSETS = [
   '/apple-touch-icon.png',
   '/icon-192.png',
   '/icon-512.png',
+  '/icon.svg',
   '/icons/icon-light-192.png',
   '/icons/icon-light-512.png',
   '/icons/icon-dark-192.png',

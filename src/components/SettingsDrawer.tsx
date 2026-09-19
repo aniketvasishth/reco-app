@@ -45,7 +45,10 @@ import { CostcoReceipt, ThemeMode } from '../types';
 import {
   MATERIAL_PALETTES,
   DEFAULT_PALETTE_ID,
+  detectSystemDynamicAccent,
+  getActivePalette,
 } from '../utils/themePalettes';
+import { getPlatformInfo } from '../utils/platform';
 import {
   generateBackupJson,
   generateItemsCsv,
@@ -94,7 +97,7 @@ interface SettingsDrawerProps {
   onSelectThemeMode: (mode: ThemeMode) => void;
   activePaletteId: string;
   onSelectPalette: (paletteId: string) => void;
-  onOpenPalettesModal: () => void;
+  onOpenPalettesModal?: () => void;
   isDarkMode: boolean;
   isImmersive?: boolean;
   onToggleImmersive?: () => void;
@@ -146,6 +149,11 @@ export function SettingsDrawer({
   const [isCheckingAi, setIsCheckingAi] = useState(false);
   const [nanoTestResult, setNanoTestResult] = useState<string | null>(null);
   const [isTestingNano, setIsTestingNano] = useState(false);
+
+  // Theme & Material You state
+  const [detectedAccent, setDetectedAccent] = useState<{ hex: string; isNative: boolean; source: string }>(() =>
+    detectSystemDynamicAccent()
+  );
 
   type AiProcessingMode = 'strict-offline' | 'on-device-fallback' | 'cloud-byok';
 
@@ -229,6 +237,12 @@ export function SettingsDrawer({
       checkOnDeviceAiAvailability().then(setAiStatus);
     }
   }, [isOpen, activeTab, aiStatus, isCheckingAi]);
+
+  useEffect(() => {
+    if (isOpen && activeTab === 'theme') {
+      setDetectedAccent(detectSystemDynamicAccent());
+    }
+  }, [isOpen, activeTab]);
 
   // File System State
   const [isSavingLocal, setIsSavingLocal] = useState(false);
@@ -585,6 +599,16 @@ export function SettingsDrawer({
     }
   };
 
+  const handleForceSync = () => {
+    const detected = detectSystemDynamicAccent();
+    setDetectedAccent(detected);
+    onSelectPalette('dynamic_system');
+    onShowSnackbar(
+      `System accent applied & saved (${detected.hex})`,
+      'Theme Updated'
+    );
+  };
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -623,7 +647,7 @@ export function SettingsDrawer({
             onClick={(e) => e.stopPropagation()}
             onTouchStart={(e) => e.stopPropagation()}
             onTouchEnd={(e) => e.stopPropagation()}
-            className="relative z-10 pointer-events-auto w-full max-w-lg md:max-w-xl bg-m3-surface-container text-m3-on-surface max-h-[88vh] sm:max-h-[90vh] rounded-t-[28px] sm:rounded-[28px] shadow-2xl flex flex-col overflow-hidden border border-m3-outline-variant/60 touch-pan-y"
+            className="relative z-10 pointer-events-auto w-full max-w-lg md:max-w-2xl lg:max-w-3xl bg-m3-surface-container text-m3-on-surface max-h-[88vh] sm:max-h-[90vh] rounded-t-[28px] sm:rounded-[28px] shadow-2xl flex flex-col overflow-hidden border border-m3-outline-variant/60 touch-pan-y"
           >
             {/* Mobile Drag Handle Bar */}
             <div className="pt-2.5 pb-1 flex justify-center sm:hidden cursor-grab active:cursor-grabbing">
@@ -1377,7 +1401,7 @@ export function SettingsDrawer({
                     transition={{ duration: 0.15 }}
                     className="space-y-4"
                   >
-                    {/* Theme Mode Selector: Auto / Light / Dark */}
+                    {/* Color Mode: Auto / Light / Dark */}
                     <div className="bg-m3-surface-container-low border border-m3-outline-variant/40 rounded-3xl p-4 sm:p-5 space-y-3 shadow-2xs">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
@@ -1427,8 +1451,8 @@ export function SettingsDrawer({
                       </div>
                     </div>
 
-                    {/* Material You Dynamic Palettes */}
-                    <div className="bg-m3-surface-container-low border border-m3-outline-variant/40 rounded-3xl p-4 sm:p-5 space-y-3 shadow-2xs">
+                    {/* Custom Colors Box */}
+                    <div className="bg-m3-surface-container-low border border-m3-outline-variant/40 rounded-3xl p-4 sm:p-5 space-y-4 shadow-2xs">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <div className="w-7 h-7 rounded-lg bg-m3-primary/15 text-m3-primary flex items-center justify-center">
@@ -1436,64 +1460,118 @@ export function SettingsDrawer({
                           </div>
                           <div>
                             <h3 className="text-xs font-bold uppercase tracking-wider text-m3-on-surface">
-                              Color Palettes
+                              Custom Colors
                             </h3>
                             <span className="text-[11px] text-m3-on-surface-variant block">
-                              Material You Dynamic Themes
+                              Material You Dynamic Palettes
                             </span>
                           </div>
                         </div>
 
-                        <button
-                          type="button"
-                          onClick={onOpenPalettesModal}
-                          className="text-xs font-semibold text-m3-primary hover:underline cursor-pointer flex items-center gap-0.5"
-                        >
-                          <span>Full Picker</span>
-                          <ChevronRight className="w-3.5 h-3.5" />
-                        </button>
+                        <span className="text-[11px] font-semibold text-m3-primary px-2.5 py-0.5 rounded-full bg-m3-primary/10 border border-m3-primary/20 max-w-[140px] truncate">
+                          {activePaletteId === 'dynamic_system' || !activePaletteId
+                            ? 'Dynamic System'
+                            : MATERIAL_PALETTES.find((p) => p.id === activePaletteId)?.name || 'Custom'}
+                        </span>
                       </div>
 
-                      {/* Palette Grid Swatches */}
-                      <div className="grid grid-cols-2 gap-2 pt-1">
-                        {MATERIAL_PALETTES.slice(0, 6).map((palette) => {
-                          const isSelected = activePaletteId === palette.id;
+                      {/* Consistent M3 Action Button for Sync System Accent */}
+                      <motion.button
+                        id="sync-system-accent-btn"
+                        whileTap={{ scale: 0.97 }}
+                        type="button"
+                        onClick={handleForceSync}
+                        className={`w-full min-h-[44px] py-3 px-4 rounded-full flex items-center justify-center gap-2 text-xs sm:text-sm font-semibold transition-all cursor-pointer shadow-xs active:shadow-none focus:outline-hidden focus:ring-2 focus:ring-m3-primary/30 ${
+                          activePaletteId === 'dynamic_system' || !activePaletteId
+                            ? 'bg-m3-primary hover:bg-m3-primary/90 text-m3-on-primary'
+                            : 'bg-m3-secondary-container hover:bg-m3-secondary-container/80 text-m3-on-secondary-container border border-m3-outline-variant/40 shadow-2xs'
+                        }`}
+                        title="Sync with device wallpaper & system accent color"
+                      >
+                        <RefreshCw className="w-4 h-4 shrink-0" />
+                        <span>Sync System Accent Now</span>
+                        {(activePaletteId === 'dynamic_system' || !activePaletteId) && (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-medium bg-black/15 dark:bg-white/20 px-2 py-0.5 rounded-full ml-1">
+                            <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                            <span>Active</span>
+                          </span>
+                        )}
+                      </motion.button>
+
+                      {/* Dual-Tone Circular Chips matching Android 17 / Pixel Wallpaper & style */}
+                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3 pt-1">
+                        {MATERIAL_PALETTES.filter((p) => p.id !== 'dynamic_system').map((palette) => {
+                          const isSelected = palette.id === activePaletteId;
+
                           return (
                             <motion.button
                               key={palette.id}
-                              whileTap={{ scale: 0.97 }}
+                              whileTap={{ scale: 0.94 }}
                               type="button"
                               onClick={() => onSelectPalette(palette.id)}
-                              className={`p-2.5 rounded-2xl border text-left transition-all cursor-pointer flex items-center justify-between gap-2 ${
-                                isSelected
-                                  ? 'bg-m3-secondary-container border-m3-primary shadow-xs ring-1 ring-m3-primary'
-                                  : 'bg-m3-surface-container hover:bg-m3-surface-container-high border-m3-outline-variant/30'
-                              }`}
+                              className="group flex flex-col items-center gap-1.5 focus:outline-hidden cursor-pointer"
+                              title={`${palette.name} • ${palette.subtitle}`}
                             >
-                              <div className="flex items-center gap-2 min-w-0">
-                                <div
-                                  className="w-5 h-5 rounded-full shrink-0 shadow-2xs border border-white/20"
-                                  style={{ backgroundColor: palette.dualTone[1] }}
-                                />
-                                <span className="text-xs font-semibold text-m3-on-surface truncate">
-                                  {palette.name}
-                                </span>
+                              {/* Outer Ring on selected (Matches Pixel rounded square indicator) */}
+                              <div
+                                className={`relative w-13 h-13 rounded-2xl p-1 flex items-center justify-center transition-all ${
+                                  isSelected
+                                    ? 'ring-2 ring-m3-primary bg-m3-primary/15 shadow-xs'
+                                    : 'hover:bg-m3-surface-container-highest/60 bg-m3-surface-container/60'
+                                }`}
+                              >
+                                {/* Dual-tone split circle */}
+                                <div className="w-9 h-9 rounded-full overflow-hidden flex shadow-xs border border-white/10">
+                                  {/* Left half: Dark Tone */}
+                                  <div
+                                    className="w-1/2 h-full"
+                                    style={{ backgroundColor: palette.dualTone[0] }}
+                                  />
+                                  {/* Right half: Light Accent */}
+                                  <div
+                                    className="w-1/2 h-full"
+                                    style={{ backgroundColor: palette.dualTone[1] }}
+                                  />
+                                </div>
+
+                                {isSelected && (
+                                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                    <span className="w-4 h-4 rounded-full bg-white/95 text-black flex items-center justify-center shadow-xs">
+                                      <Check className="w-2.5 h-2.5 stroke-[3]" />
+                                    </span>
+                                  </div>
+                                )}
                               </div>
-                              {isSelected && <Check className="w-3.5 h-3.5 text-m3-primary shrink-0" />}
+
+                              <span
+                                className={`text-[10px] text-center font-medium leading-tight line-clamp-2 max-w-[76px] ${
+                                  isSelected ? 'text-m3-primary font-bold' : 'text-m3-on-surface-variant'
+                                }`}
+                              >
+                                {palette.name}
+                              </span>
                             </motion.button>
                           );
                         })}
                       </div>
+                    </div>
 
-                      <motion.button
-                        whileTap={{ scale: 0.98 }}
-                        type="button"
-                        onClick={onOpenPalettesModal}
-                        className="w-full mt-2 py-2.5 px-3 rounded-2xl bg-m3-surface-container hover:bg-m3-surface-container-high border border-m3-outline-variant/30 text-m3-primary text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer transition-all"
-                      >
-                        <Sparkles className="w-3.5 h-3.5" />
-                        <span>Extract from Custom Wallpaper Photo</span>
-                      </motion.button>
+                    {/* Live Component Preview */}
+                    <div className="p-4 rounded-3xl bg-m3-surface-container-low border border-m3-outline-variant/40 space-y-2 shadow-2xs">
+                      <span className="text-[10px] font-bold text-m3-on-surface-variant uppercase tracking-wider block">
+                        Current Palette Preview
+                      </span>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="px-3.5 py-1.5 rounded-full bg-m3-primary text-m3-on-primary text-xs font-medium shadow-2xs">
+                          Primary Pill
+                        </span>
+                        <span className="px-3.5 py-1.5 rounded-full bg-m3-secondary-container text-m3-on-secondary-container text-xs font-medium">
+                          Secondary Tonal
+                        </span>
+                        <span className="px-3.5 py-1.5 rounded-full bg-m3-surface-container-highest text-m3-on-surface text-xs font-medium border border-m3-outline-variant/50">
+                          Outline
+                        </span>
+                      </div>
                     </div>
 
                     {/* Immersive Edge-to-Edge Mode */}
@@ -1518,11 +1596,11 @@ export function SettingsDrawer({
                               <div className="flex items-center gap-1.5">
                                 <span className="text-xs font-semibold text-m3-on-surface">Immersive View</span>
                                 <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-m3-secondary-container text-m3-on-secondary-container font-semibold">
-                                  Fullscreen
+                                  {isImmersive ? 'Edge-to-Edge' : 'Standard'}
                                 </span>
                               </div>
                               <p className="text-[11px] text-m3-on-surface-variant leading-tight mt-0.5">
-                                Hides status bars for true edge-to-edge experience
+                                Hides top status bar for true edge-to-edge experience
                               </p>
                             </div>
                           </div>
@@ -1593,17 +1671,27 @@ export function SettingsDrawer({
                       </div>
                     </div>
 
-                    {/* Android Storage & WebAPK Behavior Notice */}
+                    {/* Storage & Reset Behavior Notice */}
                     <div className="bg-m3-surface-container-low border border-m3-outline-variant/40 rounded-3xl p-4 sm:p-5 space-y-2.5 shadow-2xs">
                       <div className="flex items-center gap-2 text-xs font-bold text-m3-on-surface">
                         <Info className="w-4 h-4 text-m3-primary shrink-0" />
-                        <span>Android Storage & Reset Behavior</span>
+                        <span>
+                          {getPlatformInfo().isIOS
+                            ? 'iOS Storage & Safari Behavior'
+                            : getPlatformInfo().isAndroid
+                            ? 'Android Storage & WebAPK Behavior'
+                            : 'Browser Storage & Reset Behavior'}
+                        </span>
                       </div>
                       <p className="text-[11px] text-m3-on-surface-variant leading-relaxed">
-                        On Android, installed PWAs (WebAPKs) share their website storage sandbox with Google Chrome. Clearing storage in Android&apos;s <em>App Info</em> menu only resets the shortcut wrapper metadata while Chrome retains website data.
+                        {getPlatformInfo().isIOS
+                          ? 'On iOS & iPhone, web apps store local data within Safari WebKit storage. To wipe or backup data, use the controls below or manage Safari website data in iOS Settings.'
+                          : getPlatformInfo().isAndroid
+                          ? 'On Android, installed PWAs (WebAPKs) share storage with Google Chrome. Clearing data in App Info only resets wrapper metadata while Chrome retains site data.'
+                          : 'Installed desktop and web apps retain their encrypted cache locally on your machine.'}
                       </p>
                       <p className="text-[11px] text-m3-on-surface-variant leading-relaxed">
-                        To completely wipe all receipts, offline cache, and preferences, use the <strong>Factory Reset</strong> button below, or in Chrome open <em>Settings → Site settings → All sites → Reco → Delete &amp; reset</em>.
+                        To completely wipe all receipts, offline cache, and preferences, use the <strong>Factory Reset</strong> button below.
                       </p>
                     </div>
 
@@ -1657,28 +1745,24 @@ export function SettingsDrawer({
                   >
                     {/* App Identity */}
                     <div className="bg-m3-surface-container-low border border-m3-outline-variant/40 rounded-3xl p-4 sm:p-5 text-center space-y-2 shadow-2xs">
-                      <div className="w-12 h-12 rounded-2xl bg-m3-primary text-m3-on-primary font-bold text-xl flex items-center justify-center mx-auto shadow-md">
-                        R
+                      <div className="w-14 h-14 rounded-2xl bg-m3-primary text-m3-on-primary font-black text-lg flex items-center justify-center mx-auto shadow-md tracking-tight">
+                        Reco
                       </div>
                       <h3 className="text-base font-bold text-m3-on-surface">Reco</h3>
                       <p className="text-xs text-m3-on-surface-variant">
                         Smart Costco Receipt & Spending Tracker
                       </p>
                       <span className="inline-block px-2.5 py-0.5 rounded-full bg-m3-secondary-container text-m3-on-secondary-container text-[10px] font-mono font-bold">
-                        v2.4 • Material 3 Expressive
+                        v2.4 • {getPlatformInfo().isIOS ? 'iOS & Apple Ecosystem Ready' : 'Material 3 Expressive'}
                       </span>
                     </div>
 
-                    {/* Curated & Developed in Canada */}
+                    {/* Designed in Canada */}
                     <div className="p-4 bg-m3-surface-container-low border border-m3-outline-variant/40 rounded-3xl space-y-1.5 shadow-2xs text-center">
-                      <div className="inline-flex items-center justify-center gap-1.5 text-xs font-bold text-m3-on-surface">
-                        <span className="text-base leading-none" role="img" aria-label="Canada">🇨🇦</span>
-                        <span>Curated & Developed in Canada</span>
-                      </div>
-                      <p className="text-xs font-semibold text-m3-primary">
-                        by Aniket Vasishth
+                      <p className="text-xs text-m3-on-surface-variant/80 flex items-center justify-center gap-1.5">
+                        <span>Designed in 🇨🇦 by Aniket Vasishth</span>
                       </p>
-                      <p className="text-[11px] text-m3-on-surface-variant leading-relaxed">
+                      <p className="text-[11px] text-m3-on-surface-variant/60 leading-relaxed">
                         Engineered with privacy-first principles, offline-first reliability, and clean Material 3 design.
                       </p>
                     </div>

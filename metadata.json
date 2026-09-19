@@ -1,6 +1,6 @@
 {
-  "name": "Reco App",
-  "description": "Reco - Wholesale Receipt Search and Instant On-Device Inventory Indexer.",
+  "name": "Reco",
+  "description": "Reco - Costco Wholesale Receipt Search and Instant On-Device Inventory Indexer.",
   "requestFramePermissions": [
     "camera"
   ],

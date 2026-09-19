@@ -98,32 +98,32 @@
     </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <title>Reco App</title>
-    <meta name="description" content="Reco - Wholesale Receipt Search and Instant On-Device Inventory Indexer." />
-    <meta property="og:title" content="Reco App" />
-    <meta property="og:description" content="Reco - Wholesale Receipt Search and Instant On-Device Inventory Indexer." />
+    <title>Reco</title>
+    <meta name="description" content="Reco - Costco Wholesale Receipt Search and Instant On-Device Inventory Indexer." />
+    <meta property="og:title" content="Reco" />
+    <meta property="og:description" content="Reco - Costco Wholesale Receipt Search and Instant On-Device Inventory Indexer." />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="color-scheme" id="color-scheme-meta" content="light dark" />
     
     <!-- PWA & Mobile Web App Standalone Meta Tags with Material 3 Dynamic System Colors -->
-    <meta name="theme-color" id="theme-color-light" media="(prefers-color-scheme: light)" content="#f8f9ff" />
-    <meta name="theme-color" id="theme-color-dark" media="(prefers-color-scheme: dark)" content="#10131a" />
-    <meta name="theme-color" id="theme-color-meta" content="#10131a" />
+    <meta name="theme-color" id="theme-color-light" media="(prefers-color-scheme: light)" content="#fff8f7" />
+    <meta name="theme-color" id="theme-color-dark" media="(prefers-color-scheme: dark)" content="#14060b" />
+    <meta name="theme-color" id="theme-color-meta" content="#14060b" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" id="apple-status-bar-meta" content="default" />
     <meta name="apple-mobile-web-app-title" content="Reco" />
     <meta name="application-name" content="Reco" />
-    <meta name="msapplication-TileColor" id="ms-tile-color" content="#10131a" />
+    <meta name="msapplication-TileColor" id="ms-tile-color" content="#14060b" />
     
     <style>
       html {
         color-scheme: light dark;
       }
       html, body {
-        background-color: #10131a;
-        color: #e0e2ec;
+        background-color: #14060b;
+        color: #fceae9;
         margin: 0;
         padding: 0;
         min-height: 100%;
@@ -136,13 +136,13 @@
       }
       html:not(.dark), html:not(.dark) body {
         color-scheme: light;
-        background-color: #f8f9ff;
-        color: #181c22;
+        background-color: #fff8f7;
+        color: #240b13;
       }
       html.dark, html.dark body {
         color-scheme: dark;
-        background-color: #10131a;
-        color: #e0e2ec;
+        background-color: #14060b;
+        color: #fceae9;
       }
     </style>
 
@@ -179,7 +179,7 @@
 
         // Palette-aware early background color matching Material You & Pixel 9 swatches
         var bgColors = {
-          dynamic_system: { dark: '#10131a', light: '#f8f9ff' },
+          dynamic_system: { dark: '#14060b', light: '#fff8f7' },
           pixel_slate_blue: { dark: '#10131a', light: '#f8f9ff' },
           plum_taupe: { dark: '#161212', light: '#fff8f7' },
           burgundy_rose: { dark: '#221016', light: '#fff0f3' },
@@ -238,12 +238,12 @@
 
         var faviconLink = document.getElementById('favicon-link');
         if (faviconLink) {
-          faviconLink.setAttribute('href', isDark ? '/icons/icon-dark-32.png' : '/favicon.png');
+          faviconLink.setAttribute('href', isDark ? '/icons/icon-dark-32.png' : '/icons/icon-light-32.png');
         }
 
         var appleIcon = document.getElementById('apple-touch-icon');
         if (appleIcon) {
-          appleIcon.setAttribute('href', isDark ? '/icons/icon-dark-180.png' : '/apple-touch-icon.png');
+          appleIcon.setAttribute('href', isDark ? '/icons/icon-dark-180.png' : '/icons/icon-light-180.png');
         }
       })();
     </script>

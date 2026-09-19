@@ -77,7 +77,9 @@ export function Snackbar({ message, title, type, onClose, duration = 4000 }: Sna
           ? 'Scanning Receipt'
           : 'Notice';
     } else {
-      if (lowerMsg.includes('cleared') || lowerMsg.includes('cleanup') || lowerMsg.includes('reset')) {
+      if (lowerMsg.includes('demo') || lowerTitle.includes('demo')) {
+        displayTitle = 'Demo purchases loaded successfully';
+      } else if (lowerMsg.includes('cleared') || lowerMsg.includes('cleanup') || lowerMsg.includes('reset')) {
         displayTitle = 'Cleanup Successful';
       } else if (
         lowerMsg.includes('sync') ||

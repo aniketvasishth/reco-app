@@ -4,50 +4,50 @@
 
 :root {
   color-scheme: light;
-  /* Material 3 Light Theme Color Roles (as per Android Material 3 Guidelines) */
-  --md-sys-color-primary: #006399;
+  /* Material 3 Light Theme Color Roles (Default Dynamic Burgundy Fallback) */
+  --md-sys-color-primary: #b32b43;
   --md-sys-color-on-primary: #ffffff;
-  --md-sys-color-primary-container: #cfe5ff;
-  --md-sys-color-on-primary-container: #001d32;
+  --md-sys-color-primary-container: #ffd8df;
+  --md-sys-color-on-primary-container: #3a000e;
 
-  --md-sys-color-secondary: #51606f;
+  --md-sys-color-secondary: #75565b;
   --md-sys-color-on-secondary: #ffffff;
-  --md-sys-color-secondary-container: #d5e4f6;
-  --md-sys-color-on-secondary-container: #0e1d2a;
+  --md-sys-color-secondary-container: #ffd9de;
+  --md-sys-color-on-secondary-container: #2b1519;
 
-  --md-sys-color-tertiary: #9c4146;
+  --md-sys-color-tertiary: #7c5635;
   --md-sys-color-on-tertiary: #ffffff;
-  --md-sys-color-tertiary-container: #ffd8d9;
-  --md-sys-color-on-tertiary-container: #40000a;
+  --md-sys-color-tertiary-container: #ffdcbe;
+  --md-sys-color-on-tertiary-container: #2c1600;
 
   --md-sys-color-error: #ba1a1a;
   --md-sys-color-on-error: #ffffff;
   --md-sys-color-error-container: #ffdad6;
   --md-sys-color-on-error-container: #410002;
 
-  --md-sys-color-background: #f7f9ff;
-  --md-sys-color-on-background: #181c20;
+  --md-sys-color-background: #fff8f7;
+  --md-sys-color-on-background: #22191a;
 
-  --md-sys-color-surface: #f7f9ff;
-  --md-sys-color-on-surface: #181c20;
-  --md-sys-color-surface-variant: #dde3ea;
-  --md-sys-color-on-surface-variant: #41474d;
+  --md-sys-color-surface: #fff8f7;
+  --md-sys-color-on-surface: #22191a;
+  --md-sys-color-surface-variant: #f3dddf;
+  --md-sys-color-on-surface-variant: #524345;
 
   --md-sys-color-surface-container-lowest: #ffffff;
-  --md-sys-color-surface-container-low: #f1f4fa;
-  --md-sys-color-surface-container: #ebedf4;
-  --md-sys-color-surface-container-high: #e5e8ee;
-  --md-sys-color-surface-container-highest: #dfe2e8;
+  --md-sys-color-surface-container-low: #fff0f1;
+  --md-sys-color-surface-container: #f9eae9;
+  --md-sys-color-surface-container-high: #f3e4e4;
+  --md-sys-color-surface-container-highest: #eddede;
 
-  --md-sys-color-surface-dim: #d8dae0;
-  --md-sys-color-surface-bright: #f7f9ff;
+  --md-sys-color-surface-dim: #e6d6d7;
+  --md-sys-color-surface-bright: #fff8f7;
 
-  --md-sys-color-outline: #71787e;
-  --md-sys-color-outline-variant: #c1c7ce;
+  --md-sys-color-outline: #847375;
+  --md-sys-color-outline-variant: #d6c2c4;
 
-  --md-sys-color-inverse-surface: #2d3135;
-  --md-sys-color-inverse-on-surface: #eff1f7;
-  --md-sys-color-inverse-primary: #97cbff;
+  --md-sys-color-inverse-surface: #382e2f;
+  --md-sys-color-inverse-on-surface: #feeeef;
+  --md-sys-color-inverse-primary: #ffb2bc;
   --md-sys-color-scrim: #000000;
 
   /* Material 3 Motion Tokens */
@@ -72,51 +72,158 @@
 
 .dark {
   color-scheme: dark;
-  /* Material 3 Dark Theme Color Roles (as per Android Material 3 Guidelines) */
-  --md-sys-color-primary: #97cbff;
-  --md-sys-color-on-primary: #003353;
-  --md-sys-color-primary-container: #004a75;
-  --md-sys-color-on-primary-container: #cfe5ff;
+  /* Material 3 Dark Theme Color Roles (Default Dynamic Crimson/Monet Fallback) */
+  --md-sys-color-primary: #ffb2bc;
+  --md-sys-color-on-primary: #5f1124;
+  --md-sys-color-primary-container: #7e2339;
+  --md-sys-color-on-primary-container: #ffd8df;
 
-  --md-sys-color-secondary: #b9c8da;
-  --md-sys-color-on-secondary: #233240;
-  --md-sys-color-secondary-container: #3a4857;
-  --md-sys-color-on-secondary-container: #d5e4f6;
+  --md-sys-color-secondary: #e5bdc2;
+  --md-sys-color-on-secondary: #43292d;
+  --md-sys-color-secondary-container: #5b3f43;
+  --md-sys-color-on-secondary-container: #ffd9de;
 
-  --md-sys-color-tertiary: #ffb3b5;
-  --md-sys-color-on-tertiary: #5f121c;
-  --md-sys-color-tertiary-container: #7d2a30;
-  --md-sys-color-on-tertiary-container: #ffd8d9;
+  --md-sys-color-tertiary: #efbd94;
+  --md-sys-color-on-tertiary: #472a0c;
+  --md-sys-color-tertiary-container: #613f1f;
+  --md-sys-color-on-tertiary-container: #ffdcbe;
 
   --md-sys-color-error: #ffb4ab;
   --md-sys-color-on-error: #690005;
   --md-sys-color-error-container: #93000a;
   --md-sys-color-on-error-container: #ffdad6;
 
-  --md-sys-color-background: #101418;
-  --md-sys-color-on-background: #e0e2e8;
+  --md-sys-color-background: #14060b;
+  --md-sys-color-on-background: #f0dedf;
 
-  --md-sys-color-surface: #101418;
-  --md-sys-color-on-surface: #e0e2e8;
-  --md-sys-color-surface-variant: #41474d;
-  --md-sys-color-on-surface-variant: #c1c7ce;
+  --md-sys-color-surface: #14060b;
+  --md-sys-color-on-surface: #f0dedf;
+  --md-sys-color-surface-variant: #524345;
+  --md-sys-color-on-surface-variant: #d6c2c4;
 
-  --md-sys-color-surface-container-lowest: #0b0e12;
-  --md-sys-color-surface-container-low: #181c20;
-  --md-sys-color-surface-container: #1c2024;
-  --md-sys-color-surface-container-high: #272a2f;
-  --md-sys-color-surface-container-highest: #31353a;
+  --md-sys-color-surface-container-lowest: #0c0205;
+  --md-sys-color-surface-container-low: #1e0b12;
+  --md-sys-color-surface-container: #240e16;
+  --md-sys-color-surface-container-high: #2c121b;
+  --md-sys-color-surface-container-highest: #361722;
 
-  --md-sys-color-surface-dim: #101418;
-  --md-sys-color-surface-bright: #363a3f;
+  --md-sys-color-surface-dim: #14060b;
+  --md-sys-color-surface-bright: #3d1b26;
 
-  --md-sys-color-outline: #8b9198;
-  --md-sys-color-outline-variant: #41474d;
+  --md-sys-color-outline: #9e8c8e;
+  --md-sys-color-outline-variant: #524345;
 
-  --md-sys-color-inverse-surface: #e0e2e8;
-  --md-sys-color-inverse-on-surface: #2d3135;
-  --md-sys-color-inverse-primary: #006399;
+  --md-sys-color-inverse-surface: #f0dedf;
+  --md-sys-color-inverse-on-surface: #382e2f;
+  --md-sys-color-inverse-primary: #b32b43;
   --md-sys-color-scrim: #000000;
+}
+
+/* Intercept Android 12-17 / Pixel Launcher Active System Accent Tokens */
+@supports (color: var(--android-custom-accent1-100)) {
+  :root {
+    /* Direct System Monet Accent Mapping for Light Mode */
+    --md-sys-color-primary: var(--android-custom-accent1-600, var(--android-custom-accent1-200, #b32b43));
+    --md-sys-color-on-primary: var(--android-custom-accent1-0, #ffffff);
+    --md-sys-color-primary-container: var(--android-custom-accent1-100, #ffd8df);
+    --md-sys-color-on-primary-container: var(--android-custom-accent1-900, #3a000e);
+
+    --md-sys-color-secondary: var(--android-custom-accent2-600, #75565b);
+    --md-sys-color-on-secondary: var(--android-custom-accent2-0, #ffffff);
+    --md-sys-color-secondary-container: var(--android-custom-accent2-100, #ffd9de);
+    --md-sys-color-on-secondary-container: var(--android-custom-accent2-900, #2b1519);
+
+    --md-sys-color-tertiary: var(--android-custom-accent3-600, #7c5635);
+    --md-sys-color-on-tertiary: var(--android-custom-accent3-0, #ffffff);
+    --md-sys-color-tertiary-container: var(--android-custom-accent3-100, #ffdcbe);
+    --md-sys-color-on-tertiary-container: var(--android-custom-accent3-900, #2c1600);
+
+    --md-sys-color-background: var(--android-custom-neutral1-10, #fff8f7);
+    --md-sys-color-on-background: var(--android-custom-neutral1-900, #22191a);
+    --md-sys-color-surface: var(--android-custom-neutral1-10, #fff8f7);
+    --md-sys-color-on-surface: var(--android-custom-neutral1-900, #22191a);
+    --md-sys-color-surface-variant: var(--android-custom-neutral2-100, #f3dddf);
+    --md-sys-color-on-surface-variant: var(--android-custom-neutral2-700, #524345);
+
+    --md-sys-color-surface-container-lowest: var(--android-custom-neutral1-0, #ffffff);
+    --md-sys-color-surface-container-low: var(--android-custom-neutral1-50, #fff0f1);
+    --md-sys-color-surface-container: var(--android-custom-neutral1-100, #f9eae9);
+    --md-sys-color-surface-container-high: var(--android-custom-neutral1-150, #f3e4e4);
+    --md-sys-color-surface-container-highest: var(--android-custom-neutral1-200, #eddede);
+
+    --md-sys-color-outline: var(--android-custom-neutral2-500, #847375);
+    --md-sys-color-outline-variant: var(--android-custom-neutral2-200, #d6c2c4);
+  }
+
+  .dark,
+  :root[data-theme="dark"] {
+    /* Direct System Monet Accent Mapping for Dark Mode */
+    --md-sys-color-primary: var(--android-custom-accent1-200, var(--android-custom-accent1-800, #ffb2bc));
+    --md-sys-color-on-primary: var(--android-custom-accent1-800, #5f1124);
+    --md-sys-color-primary-container: var(--android-custom-accent1-700, #7e2339);
+    --md-sys-color-on-primary-container: var(--android-custom-accent1-100, #ffd8df);
+
+    --md-sys-color-secondary: var(--android-custom-accent2-200, #e5bdc2);
+    --md-sys-color-on-secondary: var(--android-custom-accent2-800, #43292d);
+    --md-sys-color-secondary-container: var(--android-custom-accent2-700, #5b3f43);
+    --md-sys-color-on-secondary-container: var(--android-custom-accent2-100, #ffd9de);
+
+    --md-sys-color-tertiary: var(--android-custom-accent3-200, #efbd94);
+    --md-sys-color-on-tertiary: var(--android-custom-accent3-800, #472a0c);
+    --md-sys-color-tertiary-container: var(--android-custom-accent3-700, #613f1f);
+    --md-sys-color-on-tertiary-container: var(--android-custom-accent3-100, #ffdcbe);
+
+    --md-sys-color-background: var(--android-custom-neutral1-900, var(--android-custom-neutral1-90, #14060b));
+    --md-sys-color-on-background: var(--android-custom-neutral1-100, #f0dedf);
+    --md-sys-color-surface: var(--android-custom-neutral1-900, var(--android-custom-neutral1-90, #14060b));
+    --md-sys-color-on-surface: var(--android-custom-neutral1-100, #f0dedf);
+    --md-sys-color-surface-variant: var(--android-custom-neutral2-700, #524345);
+    --md-sys-color-on-surface-variant: var(--android-custom-neutral2-200, #d6c2c4);
+
+    --md-sys-color-surface-container-lowest: var(--android-custom-neutral1-1000, #0c0205);
+    --md-sys-color-surface-container-low: var(--android-custom-neutral1-850, #1e0b12);
+    --md-sys-color-surface-container: var(--android-custom-neutral1-800, #240e16);
+    --md-sys-color-surface-container-high: var(--android-custom-neutral1-750, #2c121b);
+    --md-sys-color-surface-container-highest: var(--android-custom-neutral1-700, #361722);
+
+    --md-sys-color-outline: var(--android-custom-neutral2-400, #9e8c8e);
+    --md-sys-color-outline-variant: var(--android-custom-neutral2-700, #524345);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not(.light) {
+      --md-sys-color-primary: var(--android-custom-accent1-200, var(--android-custom-accent1-800, #ffb2bc));
+      --md-sys-color-on-primary: var(--android-custom-accent1-800, #5f1124);
+      --md-sys-color-primary-container: var(--android-custom-accent1-700, #7e2339);
+      --md-sys-color-on-primary-container: var(--android-custom-accent1-100, #ffd8df);
+
+      --md-sys-color-secondary: var(--android-custom-accent2-200, #e5bdc2);
+      --md-sys-color-on-secondary: var(--android-custom-accent2-800, #43292d);
+      --md-sys-color-secondary-container: var(--android-custom-accent2-700, #5b3f43);
+      --md-sys-color-on-secondary-container: var(--android-custom-accent2-100, #ffd9de);
+
+      --md-sys-color-tertiary: var(--android-custom-accent3-200, #efbd94);
+      --md-sys-color-on-tertiary: var(--android-custom-accent3-800, #472a0c);
+      --md-sys-color-tertiary-container: var(--android-custom-accent3-700, #613f1f);
+      --md-sys-color-on-tertiary-container: var(--android-custom-accent3-100, #ffdcbe);
+
+      --md-sys-color-background: var(--android-custom-neutral1-900, var(--android-custom-neutral1-90, #14060b));
+      --md-sys-color-on-background: var(--android-custom-neutral1-100, #f0dedf);
+      --md-sys-color-surface: var(--android-custom-neutral1-900, var(--android-custom-neutral1-90, #14060b));
+      --md-sys-color-on-surface: var(--android-custom-neutral1-100, #f0dedf);
+      --md-sys-color-surface-variant: var(--android-custom-neutral2-700, #524345);
+      --md-sys-color-on-surface-variant: var(--android-custom-neutral2-200, #d6c2c4);
+
+      --md-sys-color-surface-container-lowest: var(--android-custom-neutral1-1000, #0c0205);
+      --md-sys-color-surface-container-low: var(--android-custom-neutral1-850, #1e0b12);
+      --md-sys-color-surface-container: var(--android-custom-neutral1-800, #240e16);
+      --md-sys-color-surface-container-high: var(--android-custom-neutral1-750, #2c121b);
+      --md-sys-color-surface-container-highest: var(--android-custom-neutral1-700, #361722);
+
+      --md-sys-color-outline: var(--android-custom-neutral2-400, #9e8c8e);
+      --md-sys-color-outline-variant: var(--android-custom-neutral2-700, #524345);
+    }
+  }
 }
 
 @theme {

@@ -514,7 +514,7 @@ export function UploadModal({
           exit={{ opacity: 0, scale: 0.92, y: 16 }}
           transition={{ duration: 0.22, ease: [0.2, 0, 0, 1] }}
           id="upload-modal-container"
-          className="bg-m3-surface-container text-m3-on-surface rounded-[28px] shadow-2xl max-w-lg w-full overflow-hidden border border-m3-outline-variant/60 max-h-[90vh] flex flex-col"
+          className="bg-m3-surface-container text-m3-on-surface rounded-[28px] shadow-2xl max-w-lg md:max-w-2xl lg:max-w-3xl w-full overflow-hidden border border-m3-outline-variant/60 max-h-[90vh] flex flex-col"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Modal Header */}

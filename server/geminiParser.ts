@@ -153,7 +153,7 @@ export async function parseReceiptWithGemini({
     });
   }
 
-  const singlePrompt = `You are an expert wholesale receipt auditor and vision extraction engine specialized exclusively in Costco Wholesale receipts and Costco online invoices.
+  const singlePrompt = `You are an expert Costco Wholesale receipt auditor and vision extraction engine specialized exclusively in Costco Wholesale receipts and Costco online invoices.
 
 CRITICAL MANDATORY INSTRUCTION - STRICT COSTCO WHOLESALE VALIDATION:
 1. Costco receipts ALWAYS feature the official 'COSTCO WHOLESALE' logo or wordmark prominently at the very top of the receipt (or 'Costco.com' / 'Costco.ca' for digital online invoices).
@@ -217,7 +217,7 @@ SPECIAL HANDLING FOR VALID COSTCO RECEIPTS, DIGITAL INVOICES & PDF DOCUMENTS:
 
 Keep descriptions concise and strictly adhere to the JSON schema.`;
 
-  const multiSectionPrompt = `You are an expert wholesale receipt auditor and vision extraction engine specialized in Costco long-receipt stitching.
+  const multiSectionPrompt = `You are an expert Costco Wholesale receipt auditor and vision extraction engine specialized in Costco long-receipt stitching.
 The user has photographed a single, continuous, long Costco warehouse receipt across ${rawList.length} sequential close-up sections (Top section, Middle section(s), and Bottom totals section).
 
 CRITICAL MANDATORY INSTRUCTION - STRICT COSTCO WHOLESALE VALIDATION:

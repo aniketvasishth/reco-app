@@ -315,7 +315,7 @@ export function SummaryDrawer({
             onClick={(e) => e.stopPropagation()}
             onTouchStart={(e) => e.stopPropagation()}
             onTouchEnd={(e) => e.stopPropagation()}
-            className="w-full max-w-lg md:max-w-xl bg-m3-surface-container text-m3-on-surface max-h-[88vh] sm:max-h-[90vh] rounded-t-[28px] sm:rounded-[28px] shadow-2xl flex flex-col overflow-hidden border border-m3-outline-variant/60 touch-pan-y"
+            className="w-full max-w-lg md:max-w-2xl lg:max-w-3xl xl:max-w-4xl bg-m3-surface-container text-m3-on-surface max-h-[88vh] sm:max-h-[90vh] rounded-t-[28px] sm:rounded-[28px] shadow-2xl flex flex-col overflow-hidden border border-m3-outline-variant/60 touch-pan-y"
           >
             {/* Mobile Drag Handle Bar */}
             <div className="pt-2.5 pb-1 flex justify-center sm:hidden cursor-grab active:cursor-grabbing">
@@ -325,7 +325,7 @@ export function SummaryDrawer({
             {/* Modal Header */}
             <div className="px-5 py-3.5 border-b border-m3-outline-variant/40 flex items-center justify-between shrink-0 bg-m3-surface-container-high/60">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-full bg-m3-primary-container text-m3-on-primary-container flex items-center justify-center">
+                <div className="w-8 h-8 rounded-full bg-m3-primary-container text-m3-on-primary-container flex items-center justify-center shadow-2xs shrink-0">
                   <PieChart className="w-4 h-4 text-m3-primary" />
                 </div>
                 <div>

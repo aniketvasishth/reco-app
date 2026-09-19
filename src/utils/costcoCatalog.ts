@@ -899,7 +899,7 @@ export function resolveCostcoItemDetails(itemId: string, rawName: string): {
       productName: prod,
       brand,
       category: 'Gift Cards',
-      description: `Wholesale discounted ${brand} electronic gift card voucher.`,
+      description: `Costco Wholesale discounted ${brand} electronic gift card voucher.`,
       packageDetails: 'Digital / Physical Gift Card',
       webSourceUrl: `https://www.google.com/search?q=Costco+${encodeURIComponent(brand)}+Gift+Card`,
     };

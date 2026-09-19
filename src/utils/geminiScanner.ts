@@ -139,7 +139,7 @@ function buildCostcoReceiptFromAiResult(
 
     const productName = it.productName || catalog.productName || it.rawName;
     const brand = it.brand || catalog.brand || 'Costco';
-    const category = it.category || catalog.category || 'General Wholesale';
+    const category = it.category || catalog.category || 'Costco Wholesale';
     const description = it.description || catalog.description || '';
     const packageDetails = it.packageDetails || catalog.packageDetails || '';
 

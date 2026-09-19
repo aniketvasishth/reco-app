@@ -219,7 +219,7 @@ export function HowToModal({
                     <div className="bg-m3-primary/10 border border-m3-primary/20 rounded-2xl p-4 text-m3-on-surface">
                       <h3 className="text-sm font-bold text-m3-primary flex items-center gap-2">
                         <Search className="w-4 h-4" />
-                        Instant On-Device Wholesale Receipt Search
+                        Instant On-Device Costco Wholesale Receipt Search
                       </h3>
                       <p className="mt-1.5 text-xs text-m3-on-surface-variant leading-relaxed">
                         Reco lets you search through years of warehouse and online purchases in milliseconds. Search by item name, item number, warehouse location, payment card, or category (e.g. gift cards, returns).

@@ -54,7 +54,7 @@ export function ReceiptDetailModal({ receipt, onClose, onSearchItemId, onDeleteR
                 onClose();
               }
             }}
-            className="bg-m3-surface-container text-m3-on-surface w-full max-w-xl rounded-t-[28px] sm:rounded-[28px] shadow-2xl border border-m3-outline-variant/60 overflow-hidden flex flex-col max-h-[88vh] sm:max-h-[90vh] touch-pan-y"
+            className="bg-m3-surface-container text-m3-on-surface w-full max-w-xl md:max-w-2xl lg:max-w-3xl rounded-t-[28px] sm:rounded-[28px] shadow-2xl border border-m3-outline-variant/60 overflow-hidden flex flex-col max-h-[88vh] sm:max-h-[90vh] touch-pan-y"
             onClick={(e) => e.stopPropagation()}
             onTouchStart={(e) => e.stopPropagation()}
             onTouchEnd={(e) => e.stopPropagation()}

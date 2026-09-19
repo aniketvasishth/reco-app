@@ -414,7 +414,7 @@ export function PriceTrendChart({
         >
           <span className="flex items-center gap-1.5">
             <Calendar className="w-3.5 h-3.5 text-m3-primary" />
-            <span>Transaction Timeline ({history.length} Receipts)</span>
+            <span>Transactions ({history.length})</span>
           </span>
           <span className="text-m3-on-surface-variant flex items-center gap-1 text-[11px]">
             {isHistoryExpanded ? 'Hide' : 'Show Details'}
