@@ -39,10 +39,10 @@ export function ReceiptDetailModal({ receipt, onClose, onSearchItemId, onDeleteR
           onTouchEnd={(e) => e.stopPropagation()}
         >
           <motion.div
-            layoutId={`receipt-container-${receipt.orderNumber}`}
-            initial={{ opacity: 0, scale: 0.94, y: 50 }}
+            key={`receipt-modal-content-${receipt.id || receipt.orderNumber}`}
+            initial={{ opacity: 0, scale: 0.94, y: 40 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.94, y: 60 }}
+            exit={{ opacity: 0, scale: 0.94, y: 40 }}
             transition={M3_TRANSITIONS.emphasizedEnter}
             drag={M3_BOTTOM_SHEET_DRAG.drag}
             dragConstraints={M3_BOTTOM_SHEET_DRAG.dragConstraints}

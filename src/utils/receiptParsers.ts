@@ -721,6 +721,8 @@ export function normalizeCostcoReceipts(receipts: CostcoReceipt[]): CostcoReceip
         isReturn,
         totalPrice: isReturn ? -absTotal : absTotal,
         unitPrice: isReturn ? -absUnit : absUnit,
+        orderId: receipt.id || item.orderId,
+        orderNumber: receipt.orderNumber || item.orderNumber,
       };
     });
 

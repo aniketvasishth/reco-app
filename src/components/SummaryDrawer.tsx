@@ -26,6 +26,7 @@ import {
   m3SharedAxisXVariants,
 } from '../utils/motion';
 import { M3Ripple } from './M3Ripple';
+import { PurchaseStatisticsTab } from './PurchaseStatisticsTab';
 
 interface SummaryDrawerProps {
   isOpen: boolean;
@@ -49,7 +50,7 @@ interface SummaryDrawerProps {
   inline?: boolean;
 }
 
-type SummaryTab = 'overview' | 'channels' | 'categories' | 'cards';
+type SummaryTab = 'overview' | 'stats' | 'channels' | 'categories' | 'cards';
 
 export function SummaryDrawer({
   isOpen,
@@ -83,7 +84,7 @@ export function SummaryDrawer({
   const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
   const [receiptToDelete, setReceiptToDelete] = useState<CostcoReceipt | null>(null);
 
-  const tabOrder: SummaryTab[] = ['overview', 'channels', 'categories', 'cards'];
+  const tabOrder: SummaryTab[] = ['overview', 'stats', 'channels', 'categories', 'cards'];
 
   const handleTabChange = (newTab: SummaryTab) => {
     if (newTab === activeTab) return;
@@ -440,6 +441,7 @@ export function SummaryDrawer({
                 {(
                   [
                     { id: 'overview', label: 'Overview' },
+                    { id: 'stats', label: 'Statistics' },
                     { id: 'channels', label: 'Channels' },
                     { id: 'categories', label: 'Categories' },
                     { id: 'cards', label: 'Cards & Years' },
@@ -765,6 +767,27 @@ export function SummaryDrawer({
                         </div>
                       )}
                     </div>
+                  </motion.div>
+                )}
+
+                {activeTab === 'stats' && (
+                  <motion.div
+                    key="tab-stats"
+                    custom={direction}
+                    variants={m3SharedAxisXVariants}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
+                    className="space-y-4"
+                  >
+                    <PurchaseStatisticsTab
+                      receipts={receipts}
+                      items={items}
+                      onSearchKeyword={onSearchItemId}
+                      onSelectReceipt={onSelectReceipt}
+                      onClose={onClose}
+                      inline={inline}
+                    />
                   </motion.div>
                 )}
 

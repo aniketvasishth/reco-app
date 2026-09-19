@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useDeferredValue, useCallback } from 'react';
 import {
   Search,
   Camera,
@@ -81,6 +81,7 @@ import { isPdfFile } from './utils/pdfReceiptHelper';
 import { useImmersiveMode } from './utils/immersiveMode';
 import { initAuth } from './services/googleDriveService';
 import { hapticFeedback } from './utils/haptics';
+import { M3_TRANSITIONS, M3_DURATION, M3_EASING } from './utils/motion';
 
 const STORAGE_KEY = 'costco_receipt_searcher_data_v1';
 const THEME_KEY = 'costco_receipt_theme';
@@ -232,6 +233,7 @@ export default function App() {
   });
 
   const [searchQuery, setSearchQuery] = useState('');
+  const deferredSearchQuery = useDeferredValue(searchQuery);
   const [selectedChannel, setSelectedChannel] = useState<'all' | 'Warehouse' | 'Online'>('all');
   const [isSummaryOpen, setIsSummaryOpen] = useState(false);
   const [scannerInitialMode, setScannerInitialMode] = useState<'standard' | 'long'>('standard');
@@ -438,12 +440,13 @@ export default function App() {
   }, [receipts]);
 
   const hasSearchQuery = searchQuery.trim().length > 0;
+  const hasDeferredSearchQuery = deferredSearchQuery.trim().length > 0;
 
-  // Filter items based on user search and sort reverse chronologically by date of purchase
+  // Filter items based on deferred user search and sort reverse chronologically by date of purchase
   const filteredItems = useMemo(() => {
-    if (!hasSearchQuery) return [];
+    if (!hasDeferredSearchQuery) return [];
 
-    const q = searchQuery.trim().toLowerCase();
+    const q = deferredSearchQuery.trim().toLowerCase();
     const isGiftCardSearch = /gift\s*card|giftcards?|egift|vouchers?|\bgc\b/i.test(q);
     const isReturnSearch = /return|refund/i.test(q);
 
@@ -518,7 +521,7 @@ export default function App() {
       }
       return (a.productName || a.rawName).localeCompare(b.productName || b.rawName);
     });
-  }, [allItems, searchQuery, selectedChannel, hasSearchQuery, desktopSortBy]);
+  }, [allItems, deferredSearchQuery, selectedChannel, hasDeferredSearchQuery, desktopSortBy]);
 
   // Computed metrics for desktop dashboard
   const totalSpend = useMemo(() => {
@@ -593,7 +596,7 @@ export default function App() {
 
   // Calculate price trends for distinct matching items in active search results that have > 2 purchases (>= 3)
   const matchingTrendItems: PriceTrendSummary[] = useMemo(() => {
-    if (!hasSearchQuery || filteredItems.length === 0) return [];
+    if (!hasDeferredSearchQuery || filteredItems.length === 0) return [];
     const uniqueItemIds: string[] = Array.from(
       new Set(filteredItems.map((it) => it.itemId).filter((id): id is string => Boolean(id)))
     );
@@ -608,7 +611,7 @@ export default function App() {
       }
     }
     return trends;
-  }, [hasSearchQuery, filteredItems, allItems]);
+  }, [hasDeferredSearchQuery, filteredItems, allItems]);
 
   // Callback when receipts are added
   const handleReceiptsAdded = (newReceipts: CostcoReceipt[], message?: string, customTitle?: string) => {
@@ -957,6 +960,9 @@ export default function App() {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search by item # or name..."
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
           className="w-full pl-12 pr-11 py-4 bg-m3-surface-container-high hover:bg-m3-surface-container-highest focus:bg-m3-surface-container-highest border border-transparent focus:border-m3-primary focus:ring-4 focus:ring-m3-primary/20 rounded-full text-sm sm:text-base text-m3-on-surface placeholder:text-m3-on-surface-variant shadow-xs transition-all"
           autoFocus
         />
@@ -1098,13 +1104,19 @@ export default function App() {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search by item # or name..."
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
           className="w-full pl-12 pr-11 py-3.5 bg-m3-surface-container-high hover:bg-m3-surface-container-highest focus:bg-m3-surface-container-highest border border-transparent focus:border-m3-primary focus:ring-2 focus:ring-m3-primary/30 rounded-full text-sm text-m3-on-surface placeholder:text-m3-on-surface-variant shadow-xs transition-all"
           autoFocus
         />
         {searchQuery && (
           <motion.button
             whileTap={{ scale: 0.88 }}
-            onClick={() => setSearchQuery('')}
+            onClick={() => {
+              hapticFeedback('selection');
+              setSearchQuery('');
+            }}
             className="absolute right-4 top-1/2 -translate-y-1/2 text-m3-on-surface-variant hover:text-m3-on-surface p-1.5 cursor-pointer rounded-full hover:bg-m3-surface-container-lowest transition-colors"
             aria-label="Clear search"
           >
@@ -1188,14 +1200,24 @@ export default function App() {
       {matchingTrendItems.length > 0 && (
         <SearchPriceTrendBanner
           trends={matchingTrendItems}
-          onViewReceipt={(orderId) => setSelectedReceiptId(orderId)}
+          onViewReceipt={(orderId) => handleOpenReceipt(orderId)}
         />
       )}
 
       {/* Results List: Grid Cards */}
       <div className="pt-1">
         {filteredItems.length === 0 ? (
-          <div className="bg-m3-surface-container-lowest dark:bg-m3-surface-container-low rounded-3xl border border-m3-outline-variant/60 p-8 text-center space-y-3">
+          <motion.div
+            key="search-no-results"
+            initial={{ opacity: 0, scale: 0.98, y: 8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.98, y: -6 }}
+            transition={{
+              duration: 0.2,
+              ease: M3_EASING.emphasizedDecelerate,
+            }}
+            className="bg-m3-surface-container-lowest dark:bg-m3-surface-container-low rounded-3xl border border-m3-outline-variant/60 p-8 text-center space-y-3"
+          >
             <Search className="w-8 h-8 text-m3-outline mx-auto" />
             <h3 className="text-sm sm:text-base font-semibold text-m3-on-surface">
               No purchases matching "{searchQuery}"
@@ -1205,32 +1227,112 @@ export default function App() {
             </p>
             <motion.button
               whileTap={{ scale: 0.95 }}
-              onClick={() => setSearchQuery('')}
+              onClick={() => {
+                hapticFeedback('selection');
+                setSearchQuery('');
+              }}
               className="mt-2 inline-block px-4 py-2 rounded-full bg-m3-secondary-container text-m3-on-secondary-container hover:bg-m3-secondary-container/80 text-xs font-medium transition-colors cursor-pointer"
             >
               Clear Search
             </motion.button>
-          </div>
+          </motion.div>
         ) : (
           <div className="grid grid-cols-1 gap-3.5">
-            {filteredItems.map((item, idx) => (
-              <ItemCard
-                key={`${item.orderId || 'ord'}_${item.id || idx}_${item.itemId || idx}`}
-                item={item}
-                allItems={allItems}
-                onViewReceipt={(orderId) => setSelectedReceiptId(orderId)}
-                onReEnrich={(itemId, rawName) => handleReEnrichItem(itemId, rawName)}
-                onSearchKeyword={(keyword) => setSearchQuery(keyword)}
-                isEnriching={!!enrichingItemIds[item.itemId]}
-              />
-            ))}
+            <AnimatePresence mode="popLayout">
+              {filteredItems.map((item, idx) => (
+                <ItemCard
+                  key={`${item.orderId || 'ord'}_${item.id || idx}_${item.itemId || idx}`}
+                  index={idx}
+                  item={item}
+                  allItems={allItems}
+                  onViewReceipt={(orderId, targetItem) => handleOpenReceipt(orderId, targetItem)}
+                  onReEnrich={(itemId, rawName) => handleReEnrichItem(itemId, rawName)}
+                  onSearchKeyword={(keyword) => setSearchQuery(keyword)}
+                  isEnriching={!!enrichingItemIds[item.itemId]}
+                />
+              ))}
+            </AnimatePresence>
           </div>
         )}
       </div>
     </div>
   );
 
-  const activeReceipt = receipts.find((r) => r.id === selectedReceiptId) || null;
+  const handleOpenReceipt = useCallback(
+    (orderIdOrNumber: string, item?: CostcoItem) => {
+      if (!orderIdOrNumber && !item) return;
+
+      // Direct match against receipts
+      const directMatch = receipts.find(
+        (r) =>
+          r.id === orderIdOrNumber ||
+          r.orderNumber === orderIdOrNumber ||
+          (item && (r.id === item.orderId || r.orderNumber === item.orderNumber)) ||
+          r.items?.some(
+            (it) =>
+              it.id === orderIdOrNumber ||
+              it.orderId === orderIdOrNumber ||
+              (item &&
+                (it.id === item.id ||
+                  (it.itemId === item.itemId && it.totalPrice === item.totalPrice)))
+          )
+      );
+
+      if (directMatch) {
+        setSelectedReceiptId(directMatch.id);
+      } else {
+        // Fallback: match by normalized order number or clean string
+        const cleanTarget = (orderIdOrNumber || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+        const fuzzyMatch = receipts.find((r) => {
+          const cleanOrder = (r.orderNumber || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+          const cleanId = (r.id || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+          return (cleanOrder && cleanOrder === cleanTarget) || (cleanId && cleanId === cleanTarget);
+        });
+        if (fuzzyMatch) {
+          setSelectedReceiptId(fuzzyMatch.id);
+        } else {
+          setSelectedReceiptId(orderIdOrNumber);
+        }
+      }
+    },
+    [receipts]
+  );
+
+  const activeReceipt = useMemo(() => {
+    if (!selectedReceiptId) return null;
+
+    // 1. Direct ID match
+    const exactId = receipts.find((r) => r.id === selectedReceiptId);
+    if (exactId) return exactId;
+
+    // 2. Order number match
+    const exactOrderNumber = receipts.find((r) => r.orderNumber === selectedReceiptId);
+    if (exactOrderNumber) return exactOrderNumber;
+
+    // 3. Receipt containing an item with matching orderId, id, or orderNumber
+    const itemMatch = receipts.find((r) =>
+      r.items?.some(
+        (it) =>
+          it.orderId === selectedReceiptId ||
+          it.id === selectedReceiptId ||
+          it.orderNumber === selectedReceiptId
+      )
+    );
+    if (itemMatch) return itemMatch;
+
+    // 4. Normalized string match
+    const cleanTarget = selectedReceiptId.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+    if (cleanTarget) {
+      const fuzzy = receipts.find((r) => {
+        const cleanOrder = (r.orderNumber || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+        const cleanId = (r.id || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+        return (cleanOrder && cleanOrder === cleanTarget) || (cleanId && cleanId === cleanTarget);
+      });
+      if (fuzzy) return fuzzy;
+    }
+
+    return null;
+  }, [receipts, selectedReceiptId]);
 
   return (
     <div
@@ -1314,7 +1416,7 @@ export default function App() {
                   setSettingsInitialTab('theme');
                   setIsSettingsOpen(true);
                 }}
-                onSelectReceipt={(receiptId) => setSelectedReceiptId(receiptId)}
+                onSelectReceipt={(receiptId) => handleOpenReceipt(receiptId)}
                 onOpenFeedback={() => {
                   setFeedbackInitialError(null);
                   setIsFeedbackModalOpen(true);

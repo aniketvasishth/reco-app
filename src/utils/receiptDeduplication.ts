@@ -239,11 +239,22 @@ export function fuseReceiptData(oldReceipt: CostcoReceipt, newReceipt: CostcoRec
   // Base receipt is preferred source (JSON over Scan if one is JSON)
   const base = isNewJson ? newReceipt : oldReceipt;
   const secondary = isNewJson ? oldReceipt : newReceipt;
+  const fusedId = oldReceipt.id || newReceipt.id;
+  const fusedOrderNumber =
+    isGeneratedOrderNumber(base.orderNumber) && !isGeneratedOrderNumber(secondary.orderNumber)
+      ? secondary.orderNumber
+      : base.orderNumber;
+
+  const synchronizedItems = (base.items || []).map((it) => ({
+    ...it,
+    orderId: fusedId,
+    orderNumber: it.orderNumber || fusedOrderNumber,
+  }));
 
   return {
     ...base,
     // Preserve stable receipt ID
-    id: oldReceipt.id || newReceipt.id,
+    id: fusedId,
     // Always preserve receipt image preview if captured
     rawImagePreview: newReceipt.rawImagePreview || oldReceipt.rawImagePreview,
     // Preserve user notes
@@ -254,10 +265,8 @@ export function fuseReceiptData(oldReceipt: CostcoReceipt, newReceipt: CostcoRec
         ? base.warehouseLocation
         : secondary.warehouseLocation || base.warehouseLocation,
     // Prefer real order number over generated
-    orderNumber:
-      isGeneratedOrderNumber(base.orderNumber) && !isGeneratedOrderNumber(secondary.orderNumber)
-        ? secondary.orderNumber
-        : base.orderNumber,
+    orderNumber: fusedOrderNumber,
+    items: synchronizedItems,
     // Use the latest upload timestamp
     uploadedAt: newReceipt.uploadedAt || new Date().toISOString(),
   };

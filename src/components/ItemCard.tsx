@@ -14,22 +14,25 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { CostcoItem } from '../types';
-import { M3_TRANSITIONS } from '../utils/motion';
+import { M3_TRANSITIONS, M3_DURATION, M3_EASING } from '../utils/motion';
 import { M3Ripple } from './M3Ripple';
+import { hapticFeedback } from '../utils/haptics';
 
 interface ItemCardProps {
   key?: string;
   item: CostcoItem;
+  index?: number;
   allItems?: CostcoItem[];
   allPurchases?: CostcoItem[];
-  onViewReceipt: (orderId: string) => void;
+  onViewReceipt: (orderId: string, item?: CostcoItem) => void;
   onReEnrich: (itemId: string, rawName: string) => void;
   onSearchKeyword?: (keyword: string) => void;
   isEnriching?: boolean;
 }
 
-export function ItemCard({
+export const ItemCard = React.memo(function ItemCard({
   item,
+  index = 0,
   onViewReceipt,
   onReEnrich,
   onSearchKeyword,
@@ -75,9 +78,14 @@ export function ItemCard({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 12, scale: 0.98 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={M3_TRANSITIONS.emphasizedEnter}
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -4 }}
+      transition={{
+        duration: 0.18,
+        ease: M3_EASING.emphasizedDecelerate,
+        delay: Math.min(index * 0.015, 0.09),
+      }}
       whileHover={{ y: -2 }}
       className={`rounded-3xl border m3-elevation-transition p-4 sm:p-5 md:p-6 flex flex-col justify-between group relative overflow-hidden ${
         isReturn
@@ -378,10 +386,15 @@ export function ItemCard({
       {/* Card Footer */}
       <div className="mt-3 pt-2.5 border-t border-m3-outline-variant/30 flex items-center justify-between text-xs sm:text-sm">
         <motion.button
+          type="button"
           whileTap={{ scale: 0.94 }}
           onPointerDown={onReceiptDown}
-          onClick={() => onViewReceipt(item.orderId)}
-          className="relative overflow-hidden inline-flex items-center gap-1.5 font-semibold text-m3-primary hover:text-m3-primary/80 transition-colors cursor-pointer py-1.5 px-3 md:py-2 md:px-3.5 rounded-full hover:bg-m3-primary/10"
+          onClick={(e) => {
+            e.stopPropagation();
+            hapticFeedback('selection');
+            onViewReceipt(item.orderId || item.orderNumber || item.id, item);
+          }}
+          className="relative overflow-hidden inline-flex items-center gap-1.5 font-semibold text-m3-primary hover:text-m3-primary/80 transition-colors cursor-pointer py-1.5 px-3 md:py-2 md:px-3.5 rounded-full hover:bg-m3-primary/10 select-none"
         >
           {renderReceiptRipples()}
           <Receipt className="w-4 h-4" />
@@ -402,4 +415,4 @@ export function ItemCard({
       </div>
     </motion.div>
   );
-}
+});
