@@ -81,7 +81,7 @@ export function ItemCard({
       whileHover={{ y: -2 }}
       className={`rounded-3xl border m3-elevation-transition p-4 sm:p-5 md:p-6 flex flex-col justify-between group relative overflow-hidden ${
         isReturn
-          ? 'bg-m3-error-container/15 border-m3-error/30 hover:border-m3-error/50 hover:shadow-md'
+          ? 'bg-rose-500/10 dark:bg-rose-950/40 border-rose-500/30 dark:border-rose-400/40 hover:border-rose-500/50 hover:shadow-md'
           : 'bg-m3-surface-container-lowest dark:bg-m3-surface-container-low border-m3-outline-variant/50 hover:border-m3-outline/60 hover:shadow-md'
       }`}
     >
@@ -99,12 +99,12 @@ export function ItemCard({
               title="Click to copy Costco Item ID"
               className={`relative overflow-hidden inline-flex items-center gap-1.5 px-2.5 md:px-3 py-1 md:py-1.5 rounded-lg font-mono text-xs md:text-sm font-semibold border transition-all cursor-pointer ${
                 isReturn
-                  ? 'bg-m3-error-container/40 text-m3-error dark:text-[#ffb4ab] border-m3-error/30 hover:bg-m3-error-container/60'
+                  ? 'bg-rose-500/20 dark:bg-rose-900/60 text-rose-700 dark:text-rose-200 border-rose-500/30 dark:border-rose-400/30 hover:bg-rose-500/30'
                   : 'bg-m3-secondary-container text-m3-on-secondary-container hover:bg-m3-secondary-container/80 border-m3-outline-variant/40'
               }`}
             >
               {renderTagRipples()}
-              <Tag className={`w-3.5 h-3.5 ${isReturn ? 'text-m3-error dark:text-[#ffb4ab]' : 'text-m3-primary'}`} />
+              <Tag className={`w-3.5 h-3.5 ${isReturn ? 'text-rose-600 dark:text-rose-300' : 'text-m3-primary'}`} />
               <span>ITEM #{item.itemId}</span>
               <AnimatePresence mode="wait">
                 {copied ? (
@@ -286,12 +286,12 @@ export function ItemCard({
           }}
           title="View receipt breakdown for this amount"
           className={`relative overflow-hidden flex items-center gap-2 p-2 md:p-2.5 rounded-xl text-left cursor-pointer transition-all hover:ring-1 hover:ring-emerald-500/30 ${
-            isReturn ? 'bg-m3-error-container/30' : 'bg-m3-surface-container-low dark:bg-m3-surface-container'
+            isReturn ? 'bg-rose-500/15 dark:bg-rose-950/40 border border-rose-500/30 dark:border-rose-400/30' : 'bg-m3-surface-container-low dark:bg-m3-surface-container'
           }`}
         >
           {renderPaidRipples()}
           {isReturn ? (
-            <RotateCcw className="w-4 h-4 text-m3-error dark:text-[#ffb4ab] shrink-0" />
+            <RotateCcw className="w-4 h-4 text-rose-600 dark:text-rose-200 shrink-0" />
           ) : (
             <ShoppingBag className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
           )}
@@ -301,7 +301,7 @@ export function ItemCard({
             </span>
             <div className="flex items-baseline gap-1">
               <span className={`font-bold font-mono ${
-                isReturn ? 'text-m3-error dark:text-[#ffb4ab]' : 'text-emerald-600 dark:text-emerald-400'
+                isReturn ? 'text-rose-700 dark:text-rose-200' : 'text-emerald-600 dark:text-emerald-400'
               }`}>
                 {isReturn ? `-$${Math.abs(item.totalPrice).toFixed(2)}` : `$${item.totalPrice.toFixed(2)}`}
               </span>

@@ -43,9 +43,9 @@ Reco is architected to run **100% on the user's Android phone or browser**, util
   - **Costco Savings Analytics**: Computes your estimated 2% Executive Membership reward, 2% Costco/CIBC/Citi credit card cash back, and instant manufacturer savings.
 
 - 🖥️ **Adaptive Desktop & Mobile UI Engine**
-  - **Auto Platform Detection**: Checks client user agent, screen dimensions, and input capabilities to serve either a rich full-width desktop workstation or an ergonomics-first mobile interface.
-  - **Desktop Dashboard**: Expansive desktop layout featuring high-level metrics cards (Total Spend, Receipts, Indexed Items, Executive Reward), quick action buttons, and keyboard navigation.
-  - **Table & Grid View Toggle**: Switch between an informative multi-column data table (with SKU copying, channel badges, unit/total prices) and a responsive 3-column card grid.
+  - **Auto Platform Detection**: Checks client user agent, screen dimensions, and input capabilities to serve either a streamlined two-column desktop workstation or an ergonomics-first mobile interface.
+  - **Two-Column Desktop View**: Left panel provides the focused mobile/search interface while the right panel displays the expanded spending summary drawer and reward calculations.
+  - **Uncluttered Header**: Clean top-left navigation grouping (Privacy & AI status, How-To guide, Feedback) and responsive summary pill behavior.
   - **Global Keyboard Shortcuts**: Power-user productivity shortcuts (`⌘K` / `/` to search, `S` to scan, `U` to upload, `B` to backup, `Esc` to reset).
   - **Manual View Mode Switcher**: User override in header to force `Desktop View`, `Mobile View`, or `Auto-Detect`.
 
@@ -98,13 +98,12 @@ Reco is purposefully built around Costco Wholesale's operational paradigms:
 Reco automatically adapts its interface based on platform intelligence:
 
 ### Desktop Experience
-- **Expansive Hero & Metrics Banner**: Quick glance at total Costco spending, total receipts digitized, unique indexed items, and estimated 2% Executive Membership rebate.
-- **Action Grid**: One-click shortcuts for Camera Scan, File/PDF Upload, Spending Summary, and Google Drive Backup.
-- **View Toggle & Custom Sorting**: Easily switch between an information-dense Data Table and a responsive 3-column Card Grid. Sort items on the fly by Price (High/Low), Item Name (A–Z), or Purchase Date (Newest/Oldest).
+- **Two-Column Workstation**: A balanced side-by-side view where the left panel displays the focused mobile-style search and transaction timeline, while the right panel displays the expanded spending summary and rewards drawer.
+- **Dedicated Action Controls**: Convenient shortcuts for Camera Scan, File/PDF Upload, and Settings directly accessible on the desktop panel.
+- **Persistent Summary**: Keep category breakdowns, payment card metrics, and estimated 2% Executive Membership rewards in view at all times without modal interruptions.
 - **Keyboard Shortcuts**:
   - `⌘K` or `/` &mdash; Focus search bar
   - `Esc` &mdash; Clear current search
-  - `M` or `R` &mdash; Open Spending Summary & 2% Executive rewards drawer
   - `S` &mdash; Open live receipt scanner
   - `U` &mdash; Open upload dialog (images/PDF/JSON)
   - `B` &mdash; Open backup & Google Drive sync

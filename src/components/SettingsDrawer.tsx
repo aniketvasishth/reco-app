@@ -39,6 +39,8 @@ import {
   WifiOff,
   Wifi,
   AlertTriangle,
+  Vibrate,
+  Smartphone,
 } from 'lucide-react';
 import { User } from 'firebase/auth';
 import { CostcoReceipt, ThemeMode } from '../types';
@@ -49,6 +51,13 @@ import {
   getActivePalette,
 } from '../utils/themePalettes';
 import { getPlatformInfo } from '../utils/platform';
+import { CanadaFlag } from './CanadaFlag';
+import {
+  isHapticsSupported,
+  getHapticsEnabled,
+  setHapticsEnabled,
+  hapticFeedback,
+} from '../utils/haptics';
 import {
   generateBackupJson,
   generateItemsCsv,
@@ -87,7 +96,21 @@ import {
 import {
   M3_TRANSITIONS,
   M3_BOTTOM_SHEET_DRAG,
+  m3SharedAxisXVariants,
 } from '../utils/motion';
+
+type SettingsTab = 'backup' | 'ai' | 'compatibility' | 'theme' | 'data' | 'about';
+
+const SETTINGS_TAB_ORDER: SettingsTab[] = ['backup', 'ai', 'compatibility', 'theme', 'data', 'about'];
+
+const SETTINGS_TABS = [
+  { id: 'backup', label: 'Backup' },
+  { id: 'ai', label: 'Engine' },
+  { id: 'compatibility', label: 'Compatibility' },
+  { id: 'theme', label: 'Theme' },
+  { id: 'data', label: 'Data' },
+  { id: 'about', label: 'About' },
+] as const;
 
 interface SettingsDrawerProps {
   isOpen: boolean;
@@ -110,7 +133,7 @@ interface SettingsDrawerProps {
   isInstalled?: boolean;
   onOpenDeviceDiagnostics?: () => void;
   onShowSnackbar: (message: string, title?: string) => void;
-  initialTab?: 'backup' | 'ai' | 'compatibility' | 'theme' | 'data' | 'about';
+  initialTab?: SettingsTab;
 }
 
 export function SettingsDrawer({
@@ -136,7 +159,25 @@ export function SettingsDrawer({
   onShowSnackbar,
   initialTab = 'backup',
 }: SettingsDrawerProps) {
-  const [activeTab, setActiveTab] = useState<'backup' | 'ai' | 'compatibility' | 'theme' | 'data' | 'about'>(initialTab);
+  const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab);
+  const [direction, setDirection] = useState<number>(1);
+  const prevTabRef = useRef<SettingsTab>(initialTab);
+
+  const handleTabChange = (newTab: SettingsTab) => {
+    if (newTab === activeTab) return;
+    const oldIndex = SETTINGS_TAB_ORDER.indexOf(activeTab);
+    const newIndex = SETTINGS_TAB_ORDER.indexOf(newTab);
+    setDirection(newIndex > oldIndex ? 1 : -1);
+    prevTabRef.current = activeTab;
+    setActiveTab(newTab);
+  };
+
+  useEffect(() => {
+    if (initialTab && initialTab !== activeTab) {
+      handleTabChange(initialTab);
+    }
+  }, [initialTab]);
+
   const [showFactoryResetConfirm, setShowFactoryResetConfirm] = useState(false);
 
   // AI Engine & Offline State
@@ -262,6 +303,9 @@ export function SettingsDrawer({
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [pendingDriveSave, setPendingDriveSave] = useState(false);
   const [showAirGappedDrivePrompt, setShowAirGappedDrivePrompt] = useState(false);
+
+  // Haptic feedback preference state
+  const [hapticsEnabled, setHapticsEnabledState] = useState<boolean>(() => getHapticsEnabled());
 
   // Initialize Auth state
   useEffect(() => {
@@ -678,89 +722,33 @@ export function SettingsDrawer({
                 </motion.button>
               </div>
 
-              {/* Segmented Tab Navigation Bar */}
-              <div className="px-3 sm:px-4 py-2 bg-m3-surface-container border-b border-m3-outline-variant/30 shrink-0">
-                <div className="flex items-center gap-0.5 sm:gap-1 p-1 bg-m3-surface-container-high rounded-2xl border border-m3-outline-variant/30 text-xs font-semibold overflow-x-auto no-scrollbar snap-x snap-mandatory">
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('backup')}
-                    className={`py-1.5 sm:py-2 px-2 sm:px-2.5 rounded-xl transition-all flex items-center justify-center gap-1 sm:gap-1.5 cursor-pointer shrink-0 flex-1 snap-start select-none ${
-                      activeTab === 'backup'
-                        ? 'bg-m3-primary text-m3-on-primary shadow-xs font-bold'
-                        : 'text-m3-on-surface-variant hover:text-m3-on-surface'
-                    }`}
-                  >
-                    <Cloud className="w-3.5 h-3.5 shrink-0" />
-                    <span className="text-[11px] whitespace-nowrap">Backup</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('ai')}
-                    className={`py-1.5 sm:py-2 px-2 sm:px-2.5 rounded-xl transition-all flex items-center justify-center gap-1 sm:gap-1.5 cursor-pointer shrink-0 flex-1 snap-start select-none ${
-                      activeTab === 'ai'
-                        ? 'bg-m3-primary text-m3-on-primary shadow-xs font-bold'
-                        : 'text-m3-on-surface-variant hover:text-m3-on-surface'
-                    }`}
-                  >
-                    <Cpu className="w-3.5 h-3.5 shrink-0" />
-                    <span className="text-[11px] whitespace-nowrap">Engine</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('compatibility')}
-                    className={`py-1.5 sm:py-2 px-2 sm:px-2.5 rounded-xl transition-all flex items-center justify-center gap-1 sm:gap-1.5 cursor-pointer shrink-0 flex-1 snap-start select-none ${
-                      activeTab === 'compatibility'
-                        ? 'bg-m3-primary text-m3-on-primary shadow-xs font-bold'
-                        : 'text-m3-on-surface-variant hover:text-m3-on-surface'
-                    }`}
-                  >
-                    <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                    <span className="text-[11px] whitespace-nowrap">
-                      <span className="hidden sm:inline">Compatibility Check</span>
-                      <span className="sm:hidden">Check</span>
-                    </span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('theme')}
-                    className={`py-1.5 sm:py-2 px-2 sm:px-2.5 rounded-xl transition-all flex items-center justify-center gap-1 sm:gap-1.5 cursor-pointer shrink-0 flex-1 snap-start select-none ${
-                      activeTab === 'theme'
-                        ? 'bg-m3-primary text-m3-on-primary shadow-xs font-bold'
-                        : 'text-m3-on-surface-variant hover:text-m3-on-surface'
-                    }`}
-                  >
-                    <Palette className="w-3.5 h-3.5 shrink-0" />
-                    <span className="text-[11px] whitespace-nowrap">Theme</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('data')}
-                    className={`py-1.5 sm:py-2 px-2 sm:px-2.5 rounded-xl transition-all flex items-center justify-center gap-1 sm:gap-1.5 cursor-pointer shrink-0 flex-1 snap-start select-none ${
-                      activeTab === 'data'
-                        ? 'bg-m3-primary text-m3-on-primary shadow-xs font-bold'
-                        : 'text-m3-on-surface-variant hover:text-m3-on-surface'
-                    }`}
-                  >
-                    <Database className="w-3.5 h-3.5 shrink-0" />
-                    <span className="text-[11px] whitespace-nowrap">Data</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('about')}
-                    className={`py-1.5 sm:py-2 px-2 sm:px-2.5 rounded-xl transition-all flex items-center justify-center gap-1 sm:gap-1.5 cursor-pointer shrink-0 flex-1 snap-start select-none ${
-                      activeTab === 'about'
-                        ? 'bg-m3-primary text-m3-on-primary shadow-xs font-bold'
-                        : 'text-m3-on-surface-variant hover:text-m3-on-surface'
-                    }`}
-                  >
-                    <Info className="w-3.5 h-3.5 shrink-0" />
-                    <span className="text-[11px] whitespace-nowrap">About</span>
-                  </button>
+              {/* Material 3 Segmented Pill Tabs */}
+              <div className="px-4 pt-3 pb-2 bg-m3-surface-container shrink-0 overflow-x-auto no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                <div className="flex items-center gap-1.5 bg-m3-surface-container-high p-1 rounded-full min-w-max w-full justify-between">
+                  {SETTINGS_TABS.map((tab) => {
+                    const isActive = activeTab === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => handleTabChange(tab.id)}
+                        className={`relative flex-1 py-1.5 px-3 text-xs font-semibold rounded-full transition-colors cursor-pointer select-none text-center whitespace-nowrap ${
+                          isActive
+                            ? 'text-m3-on-secondary-container'
+                            : 'text-m3-on-surface-variant hover:text-m3-on-surface'
+                        }`}
+                      >
+                        {isActive && (
+                          <motion.div
+                            layoutId="m3-settings-tab-pill"
+                            transition={M3_TRANSITIONS.snappySpring}
+                            className="absolute inset-0 bg-m3-secondary-container rounded-full shadow-xs -z-0"
+                          />
+                        )}
+                        <span className="relative z-10 truncate block">{tab.label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -774,17 +762,20 @@ export function SettingsDrawer({
                 </div>
               )}
 
-              {/* Drawer Scrollable Content */}
-              <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-5">
-                {/* TAB 1: BACKUP & SYNC */}
-                {activeTab === 'backup' && (
-                  <motion.div
-                    key="tab-backup"
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.15 }}
-                    className="space-y-4"
-                  >
+              {/* Drawer Scrollable Content with Material 3 Shared X-Axis */}
+              <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-4 sm:p-5 relative">
+                <AnimatePresence mode="wait" custom={direction}>
+                  {/* TAB 1: BACKUP & SYNC */}
+                  {activeTab === 'backup' && (
+                    <motion.div
+                      key="tab-backup"
+                      custom={direction}
+                      variants={m3SharedAxisXVariants}
+                      initial="initial"
+                      animate="animate"
+                      exit="exit"
+                      className="space-y-4"
+                    >
                     {/* Google Drive Card */}
                     <div className="bg-m3-surface-container-low border border-m3-outline-variant/40 rounded-3xl p-4 sm:p-5 space-y-4 shadow-2xs">
                       <div className="flex items-start justify-between gap-3">
@@ -1041,9 +1032,11 @@ export function SettingsDrawer({
                 {activeTab === 'ai' && (
                   <motion.div
                     key="tab-ai"
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.15 }}
+                    custom={direction}
+                    variants={m3SharedAxisXVariants}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
                     className="space-y-4"
                   >
                     {/* 3-WAY AI ENGINE & NETWORK SELECTOR: Zero Redundancy */}
@@ -1266,9 +1259,13 @@ export function SettingsDrawer({
 
                     {/* Informational Compatibility Check Label */}
                     <div className="pt-2 text-center">
-                      <div className="inline-flex items-center justify-center py-1.5 px-4 rounded-full bg-m3-primary/10 border border-m3-primary/30 text-xs font-semibold text-m3-primary dark:text-m3-primary tracking-tight">
+                      <button
+                        type="button"
+                        onClick={() => handleTabChange('compatibility')}
+                        className="inline-flex items-center justify-center py-1.5 px-4 rounded-full bg-m3-primary/10 hover:bg-m3-primary/20 border border-m3-primary/30 text-xs font-semibold text-m3-primary dark:text-m3-primary tracking-tight transition-colors cursor-pointer"
+                      >
                         Looking for device hardware diagnostics? Open Compatibility Check
-                      </div>
+                      </button>
                     </div>
                   </motion.div>
                 )}
@@ -1277,9 +1274,11 @@ export function SettingsDrawer({
                 {activeTab === 'compatibility' && (
                   <motion.div
                     key="tab-compatibility"
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.15 }}
+                    custom={direction}
+                    variants={m3SharedAxisXVariants}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
                     className="space-y-4"
                   >
                     {/* Hardware Diagnostics Card */}
@@ -1396,9 +1395,11 @@ export function SettingsDrawer({
                 {activeTab === 'theme' && (
                   <motion.div
                     key="tab-theme"
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.15 }}
+                    custom={direction}
+                    variants={m3SharedAxisXVariants}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
                     className="space-y-4"
                   >
                     {/* Color Mode: Auto / Light / Dark */}
@@ -1623,6 +1624,96 @@ export function SettingsDrawer({
                         </div>
                       </div>
                     )}
+
+                    {/* Haptic Feedback (Vibration API) */}
+                    <div className="bg-m3-surface-container-low border border-m3-outline-variant/40 rounded-3xl p-4 sm:p-5 shadow-2xs space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2.5 pr-2">
+                          <div
+                            className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
+                              hapticsEnabled
+                                ? 'bg-m3-primary text-m3-on-primary'
+                                : 'bg-m3-surface-container-highest text-m3-on-surface-variant'
+                            }`}
+                          >
+                            <Vibrate className="w-3.5 h-3.5" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs font-semibold text-m3-on-surface">Haptic Feedback</span>
+                              <span
+                                className={`text-[9px] px-1.5 py-0.2 rounded-full font-semibold ${
+                                  isHapticsSupported()
+                                    ? hapticsEnabled
+                                      ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400'
+                                      : 'bg-m3-surface-container text-m3-on-surface-variant'
+                                    : 'bg-amber-500/15 text-amber-700 dark:text-amber-400'
+                                }`}
+                              >
+                                {isHapticsSupported()
+                                  ? hapticsEnabled
+                                    ? 'Tactile On'
+                                    : 'Off'
+                                  : 'Desktop / No Motor'}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-m3-on-surface-variant leading-tight mt-0.5">
+                              Subtle vibrations when scanning, deleting, or switching tabs
+                            </p>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={hapticsEnabled}
+                          onClick={() => {
+                            const next = !hapticsEnabled;
+                            setHapticsEnabledState(next);
+                            setHapticsEnabled(next);
+                            if (next) {
+                              hapticFeedback('success');
+                            }
+                          }}
+                          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 transition-colors duration-200 ease-in-out focus:outline-none ${
+                            hapticsEnabled ? 'bg-m3-primary border-m3-primary' : 'bg-m3-surface-container-highest border-m3-outline/60'
+                          }`}
+                        >
+                          <span
+                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+                              hapticsEnabled ? 'translate-x-5' : 'translate-x-0'
+                            }`}
+                          />
+                        </button>
+                      </div>
+
+                      {hapticsEnabled && isHapticsSupported() && (
+                        <div className="flex items-center gap-2 pt-1 border-t border-m3-outline-variant/30">
+                          <span className="text-[10px] text-m3-on-surface-variant font-medium">Test Vibration:</span>
+                          <button
+                            type="button"
+                            onClick={() => hapticFeedback('light')}
+                            className="px-2.5 py-1 rounded-full bg-m3-surface-container text-m3-on-surface text-[10px] font-semibold hover:bg-m3-surface-container-highest transition-colors cursor-pointer border border-m3-outline-variant/40"
+                          >
+                            Tap
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => hapticFeedback('scan')}
+                            className="px-2.5 py-1 rounded-full bg-m3-surface-container text-m3-on-surface text-[10px] font-semibold hover:bg-m3-surface-container-highest transition-colors cursor-pointer border border-m3-outline-variant/40"
+                          >
+                            Scan Shutter
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => hapticFeedback('success')}
+                            className="px-2.5 py-1 rounded-full bg-m3-secondary-container text-m3-on-secondary-container text-[10px] font-semibold hover:opacity-90 transition-colors cursor-pointer"
+                          >
+                            Double Pulse
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </motion.div>
                 )}
 
@@ -1630,9 +1721,11 @@ export function SettingsDrawer({
                 {activeTab === 'data' && (
                   <motion.div
                     key="tab-data"
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.15 }}
+                    custom={direction}
+                    variants={m3SharedAxisXVariants}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
                     className="space-y-4"
                   >
                     {/* Data Status Summary */}
@@ -1738,18 +1831,21 @@ export function SettingsDrawer({
                 {activeTab === 'about' && (
                   <motion.div
                     key="tab-about"
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.15 }}
+                    custom={direction}
+                    variants={m3SharedAxisXVariants}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
                     className="space-y-4"
                   >
                     {/* App Identity */}
-                    <div className="bg-m3-surface-container-low border border-m3-outline-variant/40 rounded-3xl p-4 sm:p-5 text-center space-y-2 shadow-2xs">
-                      <div className="w-14 h-14 rounded-2xl bg-m3-primary text-m3-on-primary font-black text-lg flex items-center justify-center mx-auto shadow-md tracking-tight">
-                        Reco
-                      </div>
-                      <h3 className="text-base font-bold text-m3-on-surface">Reco</h3>
-                      <p className="text-xs text-m3-on-surface-variant">
+                    <div className="bg-m3-surface-container-low border border-m3-outline-variant/40 rounded-3xl p-5 text-center space-y-2.5 shadow-2xs">
+                      <img
+                        src="/icon-192.png"
+                        alt="Reco App Icon"
+                        className="w-16 h-16 rounded-full mx-auto shadow-md"
+                      />
+                      <p className="text-xs text-m3-on-surface-variant font-medium pt-0.5">
                         Smart Costco Receipt & Spending Tracker
                       </p>
                       <span className="inline-block px-2.5 py-0.5 rounded-full bg-m3-secondary-container text-m3-on-secondary-container text-[10px] font-mono font-bold">
@@ -1759,8 +1855,10 @@ export function SettingsDrawer({
 
                     {/* Designed in Canada */}
                     <div className="p-4 bg-m3-surface-container-low border border-m3-outline-variant/40 rounded-3xl space-y-1.5 shadow-2xs text-center">
-                      <p className="text-xs text-m3-on-surface-variant/80 flex items-center justify-center gap-1.5">
-                        <span>Designed in 🇨🇦 by Aniket Vasishth</span>
+                      <p className="text-xs text-m3-on-surface-variant font-medium flex items-center justify-center gap-1.5">
+                        <span>Designed in</span>
+                        <CanadaFlag className="w-5 h-3.5 inline-block rounded-xs overflow-hidden shadow-2xs shrink-0 align-middle border border-black/10" />
+                        <span>by Aniket Vasishth</span>
                       </p>
                       <p className="text-[11px] text-m3-on-surface-variant/60 leading-relaxed">
                         Engineered with privacy-first principles, offline-first reliability, and clean Material 3 design.
@@ -1792,16 +1890,14 @@ export function SettingsDrawer({
                     </motion.button>
                   </motion.div>
                 )}
-              </div>
+              </AnimatePresence>
+            </div>
 
               {/* Bottom Quick Indicator */}
-              <div className="p-3 border-t border-m3-outline-variant/30 bg-m3-surface-container-low flex items-center justify-between text-[11px] text-m3-on-surface-variant shrink-0">
+              <div className="p-3 border-t border-m3-outline-variant/30 bg-m3-surface-container-low flex items-center text-[11px] text-m3-on-surface-variant shrink-0">
                 <span className="flex items-center gap-1.5">
                   <Shield className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                   <span>On-Device Storage</span>
-                </span>
-                <span className="font-mono text-[10px] opacity-70">
-                  Costco Receipt Engine
                 </span>
               </div>
             </motion.div>

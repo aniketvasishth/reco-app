@@ -100,10 +100,18 @@ export function detectPlatformInfo(): PlatformInfo {
   // Mobile User Agent signature
   const isMobileUA = /android|webos|iphone|ipod|blackberry|iemobile|opera mini/i.test(ua) || (/mobile/i.test(ua) && !isIPad);
 
+  // Tablet detection (iPad, Android tablets, touch tablets)
+  const isAndroidTablet = isAndroid && !/mobile/i.test(ua);
+  const isTablet = isIPad || isAndroidTablet || (window.navigator.maxTouchPoints > 0 && Math.min(window.innerWidth, window.innerHeight) >= 600 && Math.min(window.innerWidth, window.innerHeight) <= 1024);
+
+  // Orientation: portrait (vertical screen) vs landscape
+  const isPortrait = window.innerHeight > window.innerWidth ||
+    Boolean(window.matchMedia?.('(orientation: portrait)')?.matches);
+
   // View mode manual preference check
   const viewPref = getViewModePreference();
 
-  // Desktop check based on User Agent and viewport
+  // Desktop check based on User Agent, orientation, and viewport
   let isDesktop = false;
   if (viewPref === 'desktop') {
     isDesktop = true;
@@ -111,14 +119,18 @@ export function detectPlatformInfo(): PlatformInfo {
     isDesktop = false;
   } else {
     // Auto detection:
-    // If running on desktop OS and viewport >= 768px -> Desktop
-    // If viewport >= 1024px and not an iPhone/small phone UA -> Desktop
-    if (isDesktopOS && window.innerWidth >= 768) {
-      isDesktop = true;
-    } else if (window.innerWidth >= 1024 && !isIPhone && !/android.*mobile/i.test(ua)) {
-      isDesktop = true;
+    // When in tablet mode vertical screen (portrait), KEEP UI SAME AS MOBILE UI (isDesktop = false).
+    if (isPortrait && (isTablet || window.innerWidth <= 1080)) {
+      isDesktop = false;
+    } else if (isTablet) {
+      // Tablet in landscape mode with adequate width -> Desktop layout
+      isDesktop = !isPortrait && window.innerWidth >= 900;
+    } else if (isDesktopOS) {
+      // Desktop operating system in landscape / wide viewport -> Desktop layout
+      isDesktop = window.innerWidth >= 960 && !isPortrait;
     } else {
-      isDesktop = !isMobileUA && window.innerWidth >= 768;
+      // Standard mobile vs wide viewport
+      isDesktop = !isMobileUA && !isPortrait && window.innerWidth >= 1024;
     }
   }
 
@@ -257,10 +269,26 @@ export function usePlatformInfo(): PlatformInfo {
     };
 
     window.addEventListener('resize', handleUpdate);
+    window.addEventListener('orientationchange', handleUpdate);
     window.addEventListener('storage', handleUpdate);
+
+    let mql: MediaQueryList | null = null;
+    try {
+      mql = window.matchMedia?.('(orientation: portrait)');
+      if (mql && mql.addEventListener) {
+        mql.addEventListener('change', handleUpdate);
+      }
+    } catch {}
+
     return () => {
       window.removeEventListener('resize', handleUpdate);
+      window.removeEventListener('orientationchange', handleUpdate);
       window.removeEventListener('storage', handleUpdate);
+      try {
+        if (mql && mql.removeEventListener) {
+          mql.removeEventListener('change', handleUpdate);
+        }
+      } catch {}
     };
   }, []);
 

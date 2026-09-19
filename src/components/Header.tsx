@@ -2,8 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   ShieldCheck,
   ChevronRight,
-  MessageSquarePlus,
   HelpCircle,
+  Settings,
   X,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -173,37 +173,41 @@ export function Header({
             <HelpCircle className="w-4.5 h-4.5 md:w-5 md:h-5 text-m3-primary" />
           </motion.button>
 
-          {/* 3. Feedback & Bug Report Button */}
-          <motion.button
-            whileTap={{ scale: 0.92 }}
-            id="feedback-header-btn"
-            onClick={onOpenFeedback}
-            className="w-9 h-9 md:w-10 md:h-10 rounded-full text-m3-on-surface-variant hover:text-m3-primary hover:bg-m3-surface-container-highest transition-colors cursor-pointer flex items-center justify-center border border-m3-outline-variant/30 shadow-2xs"
-            title="Send Feedback or Report Bug to developer"
-            aria-label="Send feedback"
-          >
-            <MessageSquarePlus className="w-4 h-4 md:w-4.5 md:h-4.5 text-m3-on-surface-variant" />
-          </motion.button>
+          {/* 3. Settings Gear Button (Icon only) */}
+          {onOpenSettings && (
+            <motion.button
+              whileTap={{ scale: 0.92 }}
+              id="settings-header-btn"
+              onClick={onOpenSettings}
+              className="w-9 h-9 md:w-10 md:h-10 rounded-full text-m3-on-surface-variant hover:text-m3-primary hover:bg-m3-surface-container-highest transition-colors cursor-pointer flex items-center justify-center border border-m3-outline-variant/30 shadow-2xs"
+              title="Settings, Backup & Theme"
+              aria-label="Settings"
+            >
+              <Settings className="w-4 h-4 md:w-4.5 md:h-4.5 text-m3-on-surface-variant" />
+            </motion.button>
+          )}
         </div>
 
-        {/* Right: Summary pill ONLY */}
-        <div className="flex items-center shrink-0">
-          <motion.button
-            whileTap={{ scale: 0.94 }}
-            id="header-summary-btn"
-            onClick={onOpenSummary}
-            className="inline-flex items-center gap-2 px-3.5 sm:px-4 md:px-4.5 py-1.5 sm:py-2 md:py-2.5 rounded-full bg-m3-secondary-container hover:bg-m3-secondary-container/85 text-m3-on-secondary-container text-xs sm:text-sm font-semibold border border-m3-outline-variant/40 shadow-2xs hover:shadow-xs transition-all cursor-pointer shrink-0"
-            title="View spending summary and reward analytics (Press M)"
-            aria-label="View spending summary and reward analytics"
-          >
-            <span className="font-semibold">Summary</span>
-            {items.length > 0 && (
-              <span className="px-2 py-0.5 bg-m3-primary text-m3-on-primary text-[10px] md:text-xs rounded-full font-mono font-bold leading-none shadow-2xs">
-                {items.length}
-              </span>
-            )}
-          </motion.button>
-        </div>
+        {/* Right: Summary pill ONLY on mobile/non-desktop */}
+        {!isDesktop && (
+          <div className="flex items-center shrink-0">
+            <motion.button
+              whileTap={{ scale: 0.94 }}
+              id="header-summary-btn"
+              onClick={onOpenSummary}
+              className="inline-flex items-center gap-2 px-3.5 sm:px-4 md:px-4.5 py-1.5 sm:py-2 md:py-2.5 rounded-full bg-m3-secondary-container hover:bg-m3-secondary-container/85 text-m3-on-secondary-container text-xs sm:text-sm font-semibold border border-m3-outline-variant/40 shadow-2xs hover:shadow-xs transition-all cursor-pointer shrink-0"
+              title="View spending summary and reward analytics (Press M)"
+              aria-label="View spending summary and reward analytics"
+            >
+              <span className="font-semibold">Summary</span>
+              {items.length > 0 && (
+                <span className="px-2 py-0.5 bg-m3-primary text-m3-on-primary text-[10px] md:text-xs rounded-full font-mono font-bold leading-none shadow-2xs">
+                  {items.length}
+                </span>
+              )}
+            </motion.button>
+          </div>
+        )}
       </div>
     </header>
   );

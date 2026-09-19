@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import {
   Download,
   X,
@@ -16,6 +17,7 @@ import {
   MoreVertical,
   Check,
 } from 'lucide-react';
+import { M3_TRANSITIONS } from '../utils/motion';
 
 interface PWAInstallBannerProps {
   show: boolean;
@@ -97,102 +99,106 @@ export function PWAInstallBanner({
 
   return (
     <>
-      {/* Floating Bottom Install Banner for Mobile & Tablet */}
-      {showBottomBanner && (
-        <div
-          id="pwa-install-bottom-banner"
-          className="fixed bottom-3 left-3 right-3 sm:bottom-5 sm:left-auto sm:right-5 sm:max-w-md z-40 animate-in slide-in-from-bottom-5 duration-300"
-        >
-          <div className="bg-m3-surface-container-high/95 backdrop-blur-md rounded-[28px] p-4.5 shadow-2xl border border-m3-outline-variant/50 text-m3-on-surface relative overflow-hidden">
-            {/* Top M3 Gradient Accent Bar */}
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-m3-primary via-m3-secondary to-m3-tertiary" />
-
-            {/* Close / Dismiss Button */}
-            <button
-              onClick={onDismiss}
-              className="absolute top-3 right-3 p-1.5 text-m3-on-surface-variant hover:text-m3-on-surface rounded-full hover:bg-m3-surface-container-highest transition-colors cursor-pointer"
-              aria-label="Dismiss install prompt"
-            >
-              <X className="w-4 h-4" />
-            </button>
-
-            <div className="flex items-start gap-3.5 pr-6">
-              {/* App Icon */}
-              <div className="relative shrink-0">
-                <img
-                  src="/icon-192.png"
-                  alt="Reco App Icon"
-                  className="w-12 h-12 rounded-2xl shadow-md border border-m3-outline-variant/40 object-cover bg-m3-primary"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = '/icons/icon-light-192.png';
-                  }}
-                />
-                <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-xs">
-                  <CheckCircle2 className="w-3 h-3 stroke-[2.5]" />
-                </div>
-              </div>
-
-              {/* App Title & Value Proposition */}
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5">
-                  <h4 className="font-bold text-sm text-m3-on-surface tracking-tight">
-                    Install Reco App
-                  </h4>
-                  <span className="px-2 py-0.5 text-[9px] font-extrabold uppercase rounded-full bg-m3-primary-container text-m3-on-primary-container border border-m3-outline-variant/30">
-                    Native PWA
-                  </span>
-                </div>
-                <p className="text-xs text-m3-on-surface-variant mt-1 leading-snug">
-                  Adds a shortcut to your <strong>Homescreen &amp; App Drawer</strong> for full-screen camera scanning and instant offline search.
-                </p>
-              </div>
-            </div>
-
-            {/* Feature Highlights Pill Row */}
-            <div className="mt-3 flex items-center gap-1.5 text-[11px] text-m3-on-surface-variant overflow-x-auto pb-0.5">
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-m3-surface-container border border-m3-outline-variant/30 shrink-0">
-                <Home className="w-3 h-3 text-m3-primary" /> Homescreen
-              </span>
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-m3-surface-container border border-m3-outline-variant/30 shrink-0">
-                <Grid className="w-3 h-3 text-m3-primary" /> App Drawer
-              </span>
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-m3-surface-container border border-m3-outline-variant/30 shrink-0">
-                <Zap className="w-3 h-3 text-amber-500" /> Offline Fast
-              </span>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="mt-4 flex items-center gap-2">
+      {/* Floating Bottom Install Banner for Mobile & Tablet/Desktop */}
+      <AnimatePresence>
+        {showBottomBanner && (
+          <motion.div
+            id="pwa-install-bottom-banner"
+            initial={{ opacity: 0, y: 24, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 16, scale: 0.95 }}
+            transition={M3_TRANSITIONS.emphasizedEnter}
+            className="fixed bottom-3 left-3 right-3 sm:bottom-5 sm:left-5 sm:right-auto sm:max-w-md z-40"
+          >
+            <div className="bg-m3-surface-container-high text-m3-on-surface rounded-3xl p-5 shadow-lg border border-m3-outline-variant/35 relative">
+              {/* Close / Dismiss Button */}
               <button
-                onClick={handleInstallClick}
-                disabled={isInstalling}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-full bg-m3-primary hover:bg-m3-primary/90 active:scale-98 text-m3-on-primary text-xs sm:text-sm font-semibold shadow-xs transition-all cursor-pointer"
-              >
-                <Download className="w-4 h-4 shrink-0" />
-                <span>{isIOS ? 'Add to Home Screen' : 'Install App'}</span>
-              </button>
-
-              <button
+                type="button"
                 onClick={onDismiss}
-                className="py-2.5 px-4 rounded-full border border-m3-outline-variant/50 bg-m3-surface-container hover:bg-m3-surface-container-highest text-xs font-medium text-m3-on-surface transition-colors cursor-pointer"
+                className="absolute top-3.5 right-3.5 p-1.5 text-m3-on-surface-variant hover:text-m3-on-surface rounded-full hover:bg-m3-surface-container-highest transition-colors cursor-pointer"
+                aria-label="Dismiss install prompt"
               >
-                Not Now
+                <X className="w-4 h-4" />
               </button>
-            </div>
 
-            {/* "Already Added / Don't show again" Subtle Option */}
-            <div className="mt-2.5 pt-2 border-t border-m3-outline-variant/20 flex items-center justify-between text-[11px]">
-              <span className="text-m3-on-surface-variant">Already on your home screen?</span>
-              <button
-                onClick={handleMarkAsAlreadyInstalled}
-                className="font-medium text-m3-primary hover:underline cursor-pointer"
-              >
-                Don&apos;t prompt again
-              </button>
+              <div className="flex items-start gap-3.5 pr-6">
+                {/* App Icon */}
+                <div className="relative shrink-0">
+                  <img
+                    src="/icon-192.png"
+                    alt="Reco App Icon"
+                    className="w-12 h-12 rounded-2xl shadow-xs border border-m3-outline-variant/30 object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = '/icons/icon-light-192.png';
+                    }}
+                  />
+                </div>
+
+                {/* App Title & Value Proposition */}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <h4 className="font-bold text-sm text-m3-on-surface tracking-tight">
+                      Install Reco App
+                    </h4>
+                    <span className="px-2.5 py-0.5 text-[10px] font-bold uppercase rounded-full bg-m3-secondary-container text-m3-on-secondary-container">
+                      PWA
+                    </span>
+                  </div>
+                  <p className="text-xs text-m3-on-surface-variant mt-1 leading-relaxed">
+                    Add shortcut for instant offline receipt search, smart catalog indexing, and full-screen camera scanning.
+                  </p>
+                </div>
+              </div>
+
+              {/* Material 3 Assist Chips */}
+              <div className="mt-3.5 flex items-center gap-1.5 text-[11px] text-m3-on-surface-variant overflow-x-auto no-scrollbar pb-0.5">
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-m3-surface-container-highest/80 border border-m3-outline-variant/30 shrink-0 font-medium">
+                  <Home className="w-3 h-3 text-m3-primary" /> Home Screen
+                </span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-m3-surface-container-highest/80 border border-m3-outline-variant/30 shrink-0 font-medium">
+                  <Grid className="w-3 h-3 text-m3-primary" /> App Drawer
+                </span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-m3-surface-container-highest/80 border border-m3-outline-variant/30 shrink-0 font-medium">
+                  <Zap className="w-3 h-3 text-amber-500" /> 100% Offline
+                </span>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="mt-4 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleInstallClick}
+                  disabled={isInstalling}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-full bg-m3-primary hover:bg-m3-primary/90 active:scale-[0.98] text-m3-on-primary text-xs sm:text-sm font-semibold shadow-xs transition-all cursor-pointer disabled:opacity-60"
+                >
+                  <Download className="w-4 h-4 shrink-0" />
+                  <span>{isIOS ? 'Add to Home Screen' : 'Install App'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={onDismiss}
+                  className="py-2.5 px-4 rounded-full bg-m3-surface-container-highest hover:bg-m3-surface-container-highest/70 active:scale-[0.98] text-xs font-semibold text-m3-on-surface-variant hover:text-m3-on-surface transition-colors cursor-pointer"
+                >
+                  Not Now
+                </button>
+              </div>
+
+              {/* Subtle footer */}
+              <div className="mt-3 pt-2.5 border-t border-m3-outline-variant/20 flex items-center justify-between text-[11px]">
+                <span className="text-m3-on-surface-variant/80">Already on your home screen?</span>
+                <button
+                  type="button"
+                  onClick={handleMarkAsAlreadyInstalled}
+                  className="font-semibold text-m3-primary hover:underline cursor-pointer"
+                >
+                  Don&apos;t prompt again
+                </button>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Android Step-by-Step Installation Modal (Fallback / Manual Guide) */}
       {showAndroidModal && (

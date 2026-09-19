@@ -19,6 +19,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { CostcoReceipt } from '../types';
 import { scanReceiptWithAiOrFallback, scanMultiSectionReceiptWithAiOrFallback } from '../utils/receiptScanner';
+import { hapticFeedback } from '../utils/haptics';
 
 interface ReceiptCameraScannerProps {
   isOpen: boolean;
@@ -437,6 +438,7 @@ export function ReceiptCameraScanner({
       receipt.rawImagePreview = URL.createObjectURL(file);
 
       const isNano = receipt.notes?.includes('Gemini Nano') || engine === 'gemini';
+      hapticFeedback('success');
       onReceiptScanned(
         receipt,
         isNano
@@ -445,6 +447,7 @@ export function ReceiptCameraScanner({
       );
       handleClose();
     } catch (err: any) {
+      hapticFeedback('error');
       const msg = err.message || 'Failed to scan receipt. Please make sure the text is visible.';
       const isValidationErr =
         msg.includes('Costco') ||
@@ -471,9 +474,7 @@ export function ReceiptCameraScanner({
   const triggerShutterCapture = async () => {
     if (isProcessing) return;
     playShutterSound();
-    try {
-      navigator.vibrate?.(50);
-    } catch {}
+    hapticFeedback('scan');
 
     const file = await captureFrameAsFile();
     if (!file) {
@@ -503,6 +504,7 @@ export function ReceiptCameraScanner({
       receipt.rawImagePreview = URL.createObjectURL(file);
 
       const isNano = receipt.notes?.includes('Gemini Nano') || engine === 'gemini';
+      hapticFeedback('success');
       onReceiptScanned(
         receipt,
         isNano
@@ -511,6 +513,7 @@ export function ReceiptCameraScanner({
       );
       handleClose();
     } catch (err: any) {
+      hapticFeedback('error');
       const msg = err.message || 'Failed to scan receipt. Please make sure the text is visible.';
       const isValidationErr =
         msg.includes('Costco') ||
@@ -852,9 +855,10 @@ export function ReceiptCameraScanner({
                   <button
                     type="button"
                     onClick={() => {
+                      hapticFeedback('delete');
                       setCapturedSections((prev) => prev.filter((_, i) => i !== idx));
                     }}
-                    className="absolute bottom-0.5 right-0.5 p-0.5 bg-black/80 hover:bg-red-600 rounded text-white"
+                    className="absolute bottom-0.5 right-0.5 p-0.5 bg-black/80 hover:bg-red-600 rounded text-white cursor-pointer"
                   >
                     <Trash2 className="w-2.5 h-2.5" />
                   </button>

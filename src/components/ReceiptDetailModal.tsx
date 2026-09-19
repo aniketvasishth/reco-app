@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { CostcoReceipt } from '../types';
 import { M3_TRANSITIONS, M3_BOTTOM_SHEET_DRAG } from '../utils/motion';
 import { M3Ripple } from './M3Ripple';
+import { hapticFeedback } from '../utils/haptics';
 
 interface ReceiptDetailModalProps {
   receipt: CostcoReceipt | null;
@@ -213,12 +214,12 @@ export function ReceiptDetailModal({ receipt, onClose, onSearchItemId, onDeleteR
 
                     <div className="text-right shrink-0">
                       <span className={`text-xs sm:text-sm font-bold block font-mono ${
-                        it.isReturn ? 'text-m3-error dark:text-[#ffb4ab]' : 'text-m3-on-surface'
+                        it.isReturn ? 'text-rose-700 dark:text-rose-200' : 'text-m3-on-surface'
                       }`}>
                         {it.isReturn ? `-$${Math.abs(it.totalPrice).toFixed(2)}` : `$${it.totalPrice.toFixed(2)}`}
                       </span>
                       {it.discount && it.discount > 0 && (
-                        <span className="text-[10px] text-m3-error font-semibold block">
+                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold block">
                           -${it.discount.toFixed(2)} savings
                         </span>
                       )}
@@ -244,7 +245,7 @@ export function ReceiptDetailModal({ receipt, onClose, onSearchItemId, onDeleteR
                 <div className="flex justify-between text-sm font-bold text-m3-on-surface pt-2 border-t border-m3-outline-variant/40">
                   <span>{receipt.isReturn ? 'Total Refunded:' : 'Total Paid:'}</span>
                   <span className={`font-mono ${
-                    receipt.isReturn ? 'text-m3-error dark:text-[#ffb4ab]' : 'text-emerald-600 dark:text-emerald-400'
+                    receipt.isReturn ? 'text-rose-700 dark:text-rose-200 font-bold' : 'text-emerald-600 dark:text-emerald-400'
                   }`}>
                     {receipt.total < 0 ? `-$${Math.abs(receipt.total).toFixed(2)}` : `$${receipt.total.toFixed(2)}`}
                   </span>
@@ -269,7 +270,10 @@ export function ReceiptDetailModal({ receipt, onClose, onSearchItemId, onDeleteR
                   <div className="flex items-center justify-end gap-2 shrink-0">
                     <motion.button
                       whileTap={{ scale: 0.95 }}
-                      onClick={() => setConfirmDelete(false)}
+                      onClick={() => {
+                        hapticFeedback('light');
+                        setConfirmDelete(false);
+                      }}
                       className="px-3.5 py-1.5 rounded-full bg-m3-surface-container hover:bg-m3-surface-container-highest text-m3-on-surface font-semibold text-xs transition-colors cursor-pointer border border-m3-outline-variant/30"
                     >
                       Cancel
@@ -277,6 +281,7 @@ export function ReceiptDetailModal({ receipt, onClose, onSearchItemId, onDeleteR
                     <motion.button
                       whileTap={{ scale: 0.95 }}
                       onClick={() => {
+                        hapticFeedback('delete');
                         onDeleteReceipt?.(receipt.id);
                         onClose();
                       }}
@@ -292,7 +297,10 @@ export function ReceiptDetailModal({ receipt, onClose, onSearchItemId, onDeleteR
                   {onDeleteReceipt ? (
                     <motion.button
                       whileTap={{ scale: 0.95 }}
-                      onClick={() => setConfirmDelete(true)}
+                      onClick={() => {
+                        hapticFeedback('medium');
+                        setConfirmDelete(true);
+                      }}
                       className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold text-m3-error hover:bg-m3-error-container/25 transition-colors cursor-pointer border border-m3-error/20"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -303,7 +311,10 @@ export function ReceiptDetailModal({ receipt, onClose, onSearchItemId, onDeleteR
                   )}
                   <motion.button
                     whileTap={{ scale: 0.95 }}
-                    onClick={onClose}
+                    onClick={() => {
+                      hapticFeedback('light');
+                      onClose();
+                    }}
                     className="px-5 py-2 rounded-full bg-m3-surface-container-highest hover:bg-m3-surface-container-high font-semibold text-m3-on-surface transition-colors cursor-pointer border border-m3-outline-variant/30"
                   >
                     Close

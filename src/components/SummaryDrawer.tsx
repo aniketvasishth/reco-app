@@ -46,6 +46,7 @@ interface SummaryDrawerProps {
   isImmersive?: boolean;
   onToggleImmersive?: () => void;
   onSearchItemId?: (itemId: string) => void;
+  inline?: boolean;
 }
 
 type SummaryTab = 'overview' | 'channels' | 'categories' | 'cards';
@@ -69,6 +70,7 @@ export function SummaryDrawer({
   isImmersive = false,
   onToggleImmersive,
   onSearchItemId,
+  inline = false,
 }: SummaryDrawerProps) {
   const drawerRef = useRef<HTMLDivElement | null>(null);
 
@@ -280,75 +282,157 @@ export function SummaryDrawer({
     }
   };
 
-  return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          id="summary-drawer-backdrop"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.25 }}
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex flex-col justify-end sm:justify-center items-center p-0 sm:p-4 md:p-6"
-          onClick={onClose}
-          onTouchStart={(e) => e.stopPropagation()}
-          onTouchEnd={(e) => e.stopPropagation()}
+  const confirmModals = (
+    <>
+      {/* Confirm Clear All Receipts Modal */}
+      {showClearAllConfirm && (
+        <div
+          className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-in fade-in duration-150"
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowClearAllConfirm(false);
+          }}
         >
           <motion.div
-            ref={drawerRef}
-            id="summary-drawer"
-            initial={{ opacity: 0, scale: 0.94, y: 50 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.94, y: 60 }}
-            transition={M3_TRANSITIONS.emphasizedEnter}
-            drag={M3_BOTTOM_SHEET_DRAG.drag}
-            dragConstraints={M3_BOTTOM_SHEET_DRAG.dragConstraints}
-            dragElastic={M3_BOTTOM_SHEET_DRAG.dragElastic}
-            onDragEnd={(_, info) => {
-              if (
-                info.offset.y > M3_BOTTOM_SHEET_DRAG.dismissThresholdY ||
-                info.velocity.y > M3_BOTTOM_SHEET_DRAG.dismissVelocityY
-              ) {
-                onClose();
-              }
-            }}
+            initial={{ scale: 0.92, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.92, opacity: 0 }}
             onClick={(e) => e.stopPropagation()}
-            onTouchStart={(e) => e.stopPropagation()}
-            onTouchEnd={(e) => e.stopPropagation()}
-            className="w-full max-w-lg md:max-w-2xl lg:max-w-3xl xl:max-w-4xl bg-m3-surface-container text-m3-on-surface max-h-[88vh] sm:max-h-[90vh] rounded-t-[28px] sm:rounded-[28px] shadow-2xl flex flex-col overflow-hidden border border-m3-outline-variant/60 touch-pan-y"
+            className="bg-m3-surface-container rounded-3xl p-6 max-w-sm w-full border border-m3-outline-variant/40 shadow-2xl space-y-4 text-center"
           >
-            {/* Mobile Drag Handle Bar */}
-            <div className="pt-2.5 pb-1 flex justify-center sm:hidden cursor-grab active:cursor-grabbing">
-              <div className="w-10 h-1.5 rounded-full bg-m3-outline-variant/60" />
+            <div className="w-12 h-12 rounded-full bg-m3-error-container/40 text-m3-error flex items-center justify-center mx-auto">
+              <Trash2 className="w-6 h-6" />
             </div>
-
-            {/* Modal Header */}
-            <div className="px-5 py-3.5 border-b border-m3-outline-variant/40 flex items-center justify-between shrink-0 bg-m3-surface-container-high/60">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-full bg-m3-primary-container text-m3-on-primary-container flex items-center justify-center shadow-2xs shrink-0">
-                  <PieChart className="w-4 h-4 text-m3-primary" />
-                </div>
-                <div>
-                  <h2 className="text-base font-bold text-m3-on-surface leading-tight">
-                    Purchase Summary
-                  </h2>
-                  <span className="text-[11px] text-m3-on-surface-variant block">
-                    {receipts.length} receipts • {items.length} items
-                  </span>
-                </div>
-              </div>
-
-              <motion.button
-                whileTap={{ scale: 0.92 }}
-                onPointerDown={onCloseDown}
-                onClick={onClose}
-                className="relative overflow-hidden p-2 text-m3-on-surface-variant hover:text-m3-on-surface rounded-full hover:bg-m3-surface-container-highest transition-colors cursor-pointer"
-                aria-label="Close summary"
+            <div className="space-y-1">
+              <h3 className="text-base font-bold text-m3-on-surface">Clear All Receipts?</h3>
+              <p className="text-xs text-m3-on-surface-variant leading-relaxed">
+                This will permanently delete all {receipts.length} stored receipts and their items from your local database. You can restore from a backup or reload sample data at any time.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowClearAllConfirm(false)}
+                className="py-2.5 rounded-xl bg-m3-surface-container-high text-m3-on-surface text-xs font-semibold hover:bg-m3-surface-container-highest transition-colors cursor-pointer"
               >
-                {renderCloseRipples()}
-                <X className="w-5 h-5" />
-              </motion.button>
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowClearAllConfirm(false);
+                  onClearAllReceipts?.();
+                  if (!inline) onClose();
+                }}
+                className="py-2.5 rounded-xl bg-m3-error text-m3-on-error text-xs font-bold hover:bg-m3-error/90 transition-colors cursor-pointer shadow-xs"
+              >
+                Yes, Clear All
+              </button>
             </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Confirm Delete Individual Receipt Modal */}
+      {receiptToDelete && (
+        <div
+          className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-in fade-in duration-150"
+          onClick={(e) => {
+            e.stopPropagation();
+            setReceiptToDelete(null);
+          }}
+        >
+          <motion.div
+            initial={{ scale: 0.92, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.92, opacity: 0 }}
+            onClick={(e) => e.stopPropagation()}
+            className="bg-m3-surface-container rounded-3xl p-6 max-w-sm w-full border border-m3-outline-variant/40 shadow-2xl space-y-4 text-center"
+          >
+            <div className="w-12 h-12 rounded-full bg-m3-error-container/40 text-m3-error flex items-center justify-center mx-auto">
+              <Trash2 className="w-6 h-6" />
+            </div>
+            <div className="space-y-1.5">
+              <h3 className="text-base font-bold text-m3-on-surface font-mono">
+                Delete Receipt #{receiptToDelete.orderNumber}?
+              </h3>
+              <p className="text-xs text-m3-on-surface-variant leading-relaxed">
+                Remove this {receiptToDelete.orderType === 'Online' ? 'Costco.com order' : 'Costco Warehouse receipt'} from {receiptToDelete.orderDate}?
+              </p>
+              <div className="p-2.5 rounded-xl bg-m3-surface-container-high border border-m3-outline-variant/30 text-xs flex items-center justify-between text-m3-on-surface font-semibold">
+                <span>{receiptToDelete.items.length} item{receiptToDelete.items.length === 1 ? '' : 's'}</span>
+                <span className="font-mono text-m3-primary">
+                  {receiptToDelete.total < 0
+                    ? `-$${Math.abs(receiptToDelete.total).toFixed(2)}`
+                    : `$${receiptToDelete.total.toFixed(2)}`}
+                </span>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setReceiptToDelete(null)}
+                className="py-2.5 rounded-xl bg-m3-surface-container-high text-m3-on-surface text-xs font-semibold hover:bg-m3-surface-container-highest transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (onDeleteReceipt && receiptToDelete) {
+                    onDeleteReceipt(receiptToDelete.id);
+                  }
+                  setReceiptToDelete(null);
+                }}
+                className="py-2.5 rounded-xl bg-m3-error text-m3-on-error text-xs font-bold hover:bg-m3-error/90 transition-colors cursor-pointer shadow-xs"
+              >
+                Yes, Delete
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </>
+  );
+
+  const drawerBody = (
+    <>
+      {/* Mobile Drag Handle Bar */}
+      {!inline && (
+        <div className="pt-2.5 pb-1 flex justify-center sm:hidden cursor-grab active:cursor-grabbing">
+          <div className="w-10 h-1.5 rounded-full bg-m3-outline-variant/60" />
+        </div>
+      )}
+
+      {/* Modal Header */}
+      <div className="px-5 py-3.5 border-b border-m3-outline-variant/40 flex items-center justify-between shrink-0 bg-m3-surface-container-high/60">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-full bg-m3-primary-container text-m3-on-primary-container flex items-center justify-center shadow-2xs shrink-0">
+            <PieChart className="w-4 h-4 text-m3-primary" />
+          </div>
+          <div>
+            <h2 className="text-base font-bold text-m3-on-surface leading-tight">
+              Purchase Summary
+            </h2>
+            <span className="text-[11px] text-m3-on-surface-variant block">
+              {receipts.length} receipts • {items.length} items
+            </span>
+          </div>
+        </div>
+
+        {!inline && (
+          <motion.button
+            whileTap={{ scale: 0.92 }}
+            onPointerDown={onCloseDown}
+            onClick={onClose}
+            className="relative overflow-hidden p-2 text-m3-on-surface-variant hover:text-m3-on-surface rounded-full hover:bg-m3-surface-container-highest transition-colors cursor-pointer"
+            aria-label="Close summary"
+          >
+            {renderCloseRipples()}
+            <X className="w-5 h-5" />
+          </motion.button>
+        )}
+      </div>
 
             {/* Material 3 Segmented Pill Tabs */}
             <div className="px-4 pt-3 pb-2 bg-m3-surface-container shrink-0 overflow-x-auto no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
@@ -512,16 +596,16 @@ export function SummaryDrawer({
                           </div>
                         </div>
 
-                        <div className="bg-m3-error-container/25 rounded-2xl p-3 border border-m3-error/30 flex flex-col justify-between shadow-2xs">
+                        <div className="bg-rose-500/10 dark:bg-rose-950/40 rounded-2xl p-3 border border-rose-500/30 dark:border-rose-400/30 flex flex-col justify-between shadow-2xs">
                           <div className="flex items-center justify-between gap-1">
-                            <span className="text-[10px] sm:text-[11px] font-bold text-m3-error dark:text-[#ffb4ab] uppercase tracking-wider truncate">
+                            <span className="text-[10px] sm:text-[11px] font-bold text-rose-700 dark:text-rose-200 uppercase tracking-wider truncate">
                               Returns
                             </span>
-                            <span className="text-[10px] font-bold text-m3-on-error-container bg-m3-error-container px-1.5 py-0.5 rounded font-mono shrink-0">
+                            <span className="text-[10px] font-bold text-rose-800 dark:text-rose-100 bg-rose-500/20 dark:bg-rose-900/60 border border-rose-500/30 dark:border-rose-400/30 px-1.5 py-0.5 rounded font-mono shrink-0">
                               #{totalReturnsCount}
                             </span>
                           </div>
-                          <div className="mt-1.5 text-base sm:text-lg font-bold font-mono text-m3-error dark:text-[#ffb4ab] truncate">
+                          <div className="mt-1.5 text-base sm:text-lg font-bold font-mono text-rose-700 dark:text-rose-200 truncate">
                             -${totalReturnsAmount.toFixed(2)}
                           </div>
                         </div>
@@ -541,7 +625,7 @@ export function SummaryDrawer({
                           onClick={() => {
                             if (onSearchItemId && firstPurchaseDate) {
                               onSearchItemId(firstPurchaseDate);
-                              onClose();
+                              if (!inline) onClose();
                             }
                           }}
                           title={`Search purchases from ${formatDateLabel(firstPurchaseDate)}`}
@@ -560,7 +644,7 @@ export function SummaryDrawer({
                           onClick={() => {
                             if (onSearchItemId && latestPurchaseDate) {
                               onSearchItemId(latestPurchaseDate);
-                              onClose();
+                              if (!inline) onClose();
                             }
                           }}
                           title={`Search purchases from ${formatDateLabel(latestPurchaseDate)}`}
@@ -589,7 +673,7 @@ export function SummaryDrawer({
                               e.stopPropagation();
                               setShowClearAllConfirm(true);
                             }}
-                            className="text-[11px] text-m3-error dark:text-[#ffb4ab] hover:underline flex items-center gap-1 font-semibold cursor-pointer py-1 px-1.5 rounded-lg active:bg-m3-error-container/20 transition-colors"
+                            className="text-[11px] text-rose-700 dark:text-rose-200 hover:underline flex items-center gap-1 font-semibold cursor-pointer py-1 px-1.5 rounded-lg hover:bg-rose-500/10 active:bg-rose-500/20 transition-colors"
                             title="Clear all stored receipts"
                           >
                             <Trash2 className="w-3 h-3" />
@@ -632,7 +716,7 @@ export function SummaryDrawer({
                                 }}
                                 className={`border p-3.5 rounded-2xl cursor-pointer transition-all flex items-center justify-between text-xs m3-elevation-transition ${
                                   isRet
-                                    ? 'bg-m3-error-container/15 hover:bg-m3-error-container/25 border-m3-error/30'
+                                    ? 'bg-rose-500/10 dark:bg-rose-950/40 hover:bg-rose-500/15 dark:hover:bg-rose-900/50 border-rose-500/30 dark:border-rose-400/30'
                                     : 'bg-m3-surface-container-low hover:bg-m3-surface-container-high border-m3-outline-variant/40 hover:shadow-xs'
                                 }`}
                               >
@@ -652,7 +736,7 @@ export function SummaryDrawer({
                                 <div className="flex items-center gap-2 shrink-0 pl-2">
                                   <span
                                     className={`font-bold font-mono ${
-                                      isRet ? 'text-m3-error dark:text-[#ffb4ab]' : 'text-m3-on-surface'
+                                      isRet ? 'text-rose-700 dark:text-rose-200' : 'text-m3-on-surface'
                                     }`}
                                   >
                                     {isRet
@@ -668,7 +752,7 @@ export function SummaryDrawer({
                                       }}
                                       title="Delete this receipt"
                                       aria-label={`Delete receipt #${r.orderNumber}`}
-                                      className="p-2 -mr-1 rounded-full text-m3-on-surface-variant/70 hover:text-m3-error hover:bg-m3-error-container/25 active:bg-m3-error-container/40 transition-colors cursor-pointer shrink-0"
+                                      className="p-2 -mr-1 rounded-full text-m3-on-surface-variant/70 hover:text-rose-600 dark:hover:text-rose-300 hover:bg-rose-500/15 active:bg-rose-500/25 transition-colors cursor-pointer shrink-0"
                                     >
                                       <Trash2 className="w-4 h-4" />
                                     </button>
@@ -700,7 +784,7 @@ export function SummaryDrawer({
                         onClick={() => {
                           if (onSearchItemId) {
                             onSearchItemId('Warehouse');
-                            onClose();
+                            if (!inline) onClose();
                           }
                         }}
                         title="Filter warehouse purchases"
@@ -723,7 +807,7 @@ export function SummaryDrawer({
                         onClick={() => {
                           if (onSearchItemId) {
                             onSearchItemId('Costco.com');
-                            onClose();
+                            if (!inline) onClose();
                           }
                         }}
                         title="Filter online purchases"
@@ -801,7 +885,7 @@ export function SummaryDrawer({
                               onClick={() => {
                                 if (onSearchItemId) {
                                   onSearchItemId(cat);
-                                  onClose();
+                                  if (!inline) onClose();
                                 }
                               }}
                               title={`Filter items in ${cat}`}
@@ -860,7 +944,7 @@ export function SummaryDrawer({
                               onClick={() => {
                                 if (onSearchItemId) {
                                   onSearchItemId(card);
-                                  onClose();
+                                  if (!inline) onClose();
                                 }
                               }}
                               title={`Filter items paid with ${card}`}
@@ -902,7 +986,7 @@ export function SummaryDrawer({
                               onClick={() => {
                                 if (onSearchItemId) {
                                   onSearchItemId(yr);
-                                  onClose();
+                                  if (!inline) onClose();
                                 }
                               }}
                               title={`Filter purchases from year ${yr}`}
@@ -929,132 +1013,64 @@ export function SummaryDrawer({
                 )}
               </AnimatePresence>
             </div>
+    </>
+  );
 
-            {/* Footer with Developer Feedback */}
-            <div className="p-3.5 border-t border-m3-outline-variant/40 bg-m3-surface-container-high flex items-center justify-between text-[11px] text-m3-on-surface-variant shrink-0">
-              <span>Private • On-device</span>
-              {onOpenFeedback && (
-                <button
-                  onClick={() => {
-                    onOpenFeedback();
-                  }}
-                  className="text-m3-primary hover:underline flex items-center gap-1 font-medium cursor-pointer"
-                >
-                  <MessageSquarePlus className="w-3 h-3" />
-                  <span>Report issue / Feedback</span>
-                </button>
-              )}
-            </div>
+  if (inline) {
+    return (
+      <>
+        <div
+          ref={drawerRef}
+          id="summary-drawer-inline"
+          className="w-full bg-m3-surface-container text-m3-on-surface rounded-3xl shadow-xs flex flex-col overflow-hidden border border-m3-outline-variant/40 max-h-[calc(100vh-10rem)]"
+        >
+          {drawerBody}
+        </div>
+        {confirmModals}
+      </>
+    );
+  }
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          id="summary-drawer-backdrop"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.25 }}
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex flex-col justify-end sm:justify-center items-center p-0 sm:p-4 md:p-6"
+          onClick={onClose}
+          onTouchStart={(e) => e.stopPropagation()}
+          onTouchEnd={(e) => e.stopPropagation()}
+        >
+          <motion.div
+            ref={drawerRef}
+            id="summary-drawer"
+            initial={{ opacity: 0, scale: 0.94, y: 50 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.94, y: 60 }}
+            transition={M3_TRANSITIONS.emphasizedEnter}
+            drag={M3_BOTTOM_SHEET_DRAG.drag}
+            dragConstraints={M3_BOTTOM_SHEET_DRAG.dragConstraints}
+            dragElastic={M3_BOTTOM_SHEET_DRAG.dragElastic}
+            onDragEnd={(_, info) => {
+              if (
+                info.offset.y > M3_BOTTOM_SHEET_DRAG.dismissThresholdY ||
+                info.velocity.y > M3_BOTTOM_SHEET_DRAG.dismissVelocityY
+              ) {
+                onClose();
+              }
+            }}
+            onClick={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
+            onTouchEnd={(e) => e.stopPropagation()}
+            className="w-full max-w-lg md:max-w-2xl lg:max-w-3xl xl:max-w-4xl bg-m3-surface-container text-m3-on-surface max-h-[88vh] sm:max-h-[90vh] rounded-t-[28px] sm:rounded-[28px] shadow-2xl flex flex-col overflow-hidden border border-m3-outline-variant/60 touch-pan-y"
+          >
+            {drawerBody}
           </motion.div>
-
-          {/* Confirm Clear All Receipts Modal */}
-          {showClearAllConfirm && (
-            <div
-              className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-in fade-in duration-150"
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowClearAllConfirm(false);
-              }}
-            >
-              <motion.div
-                initial={{ scale: 0.92, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.92, opacity: 0 }}
-                onClick={(e) => e.stopPropagation()}
-                className="bg-m3-surface-container rounded-3xl p-6 max-w-sm w-full border border-m3-outline-variant/40 shadow-2xl space-y-4 text-center"
-              >
-                <div className="w-12 h-12 rounded-full bg-m3-error-container/40 text-m3-error flex items-center justify-center mx-auto">
-                  <Trash2 className="w-6 h-6" />
-                </div>
-                <div className="space-y-1">
-                  <h3 className="text-base font-bold text-m3-on-surface">Clear All Receipts?</h3>
-                  <p className="text-xs text-m3-on-surface-variant leading-relaxed">
-                    This will permanently delete all {receipts.length} stored receipts and their items from your local database. You can restore from a backup or reload sample data at any time.
-                  </p>
-                </div>
-                <div className="grid grid-cols-2 gap-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowClearAllConfirm(false)}
-                    className="py-2.5 rounded-xl bg-m3-surface-container-high text-m3-on-surface text-xs font-semibold hover:bg-m3-surface-container-highest transition-colors cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowClearAllConfirm(false);
-                      onClearAllReceipts?.();
-                      onClose();
-                    }}
-                    className="py-2.5 rounded-xl bg-m3-error text-m3-on-error text-xs font-bold hover:bg-m3-error/90 transition-colors cursor-pointer shadow-xs"
-                  >
-                    Yes, Clear All
-                  </button>
-                </div>
-              </motion.div>
-            </div>
-          )}
-
-          {/* Confirm Delete Individual Receipt Modal */}
-          {receiptToDelete && (
-            <div
-              className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-in fade-in duration-150"
-              onClick={(e) => {
-                e.stopPropagation();
-                setReceiptToDelete(null);
-              }}
-            >
-              <motion.div
-                initial={{ scale: 0.92, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.92, opacity: 0 }}
-                onClick={(e) => e.stopPropagation()}
-                className="bg-m3-surface-container rounded-3xl p-6 max-w-sm w-full border border-m3-outline-variant/40 shadow-2xl space-y-4 text-center"
-              >
-                <div className="w-12 h-12 rounded-full bg-m3-error-container/40 text-m3-error flex items-center justify-center mx-auto">
-                  <Trash2 className="w-6 h-6" />
-                </div>
-                <div className="space-y-1.5">
-                  <h3 className="text-base font-bold text-m3-on-surface font-mono">
-                    Delete Receipt #{receiptToDelete.orderNumber}?
-                  </h3>
-                  <p className="text-xs text-m3-on-surface-variant leading-relaxed">
-                    Remove this {receiptToDelete.orderType === 'Online' ? 'Costco.com order' : 'Costco Warehouse receipt'} from {receiptToDelete.orderDate}?
-                  </p>
-                  <div className="p-2.5 rounded-xl bg-m3-surface-container-high border border-m3-outline-variant/30 text-xs flex items-center justify-between text-m3-on-surface font-semibold">
-                    <span>{receiptToDelete.items.length} item{receiptToDelete.items.length === 1 ? '' : 's'}</span>
-                    <span className="font-mono text-m3-primary">
-                      {receiptToDelete.total < 0
-                        ? `-$${Math.abs(receiptToDelete.total).toFixed(2)}`
-                        : `$${receiptToDelete.total.toFixed(2)}`}
-                    </span>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setReceiptToDelete(null)}
-                    className="py-2.5 rounded-xl bg-m3-surface-container-high text-m3-on-surface text-xs font-semibold hover:bg-m3-surface-container-highest transition-colors cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (onDeleteReceipt && receiptToDelete) {
-                        onDeleteReceipt(receiptToDelete.id);
-                      }
-                      setReceiptToDelete(null);
-                    }}
-                    className="py-2.5 rounded-xl bg-m3-error text-m3-on-error text-xs font-bold hover:bg-m3-error/90 transition-colors cursor-pointer shadow-xs"
-                  >
-                    Yes, Delete
-                  </button>
-                </div>
-              </motion.div>
-            </div>
-          )}
+          {confirmModals}
         </motion.div>
       )}
     </AnimatePresence>

@@ -80,6 +80,7 @@ import { scanReceiptWithAiOrFallback, scanMultiSectionReceiptWithAiOrFallback } 
 import { isPdfFile } from './utils/pdfReceiptHelper';
 import { useImmersiveMode } from './utils/immersiveMode';
 import { initAuth } from './services/googleDriveService';
+import { hapticFeedback } from './utils/haptics';
 
 const STORAGE_KEY = 'costco_receipt_searcher_data_v1';
 const THEME_KEY = 'costco_receipt_theme';
@@ -654,6 +655,7 @@ export default function App() {
     }
 
     // Explicit success snackbar with green indicator, triggered strictly on successful data insertion
+    hapticFeedback('success');
     showSnackbar(
       msg,
       customTitle || (isDemo ? 'Demo purchases loaded successfully' : isUpdated ? 'Receipt Updated' : 'Receipt Scanned Successfully'),
@@ -680,6 +682,7 @@ export default function App() {
 
   // Clear all receipts from device
   const handleClearAllReceipts = () => {
+    hapticFeedback('delete');
     setReceipts([]);
     try {
       localStorage.removeItem(STORAGE_KEY);
@@ -694,6 +697,7 @@ export default function App() {
 
   // Complete factory reset: purge LocalStorage, SessionStorage, CacheStorage, and Service Worker
   const handleFactoryReset = async () => {
+    hapticFeedback('delete');
     try {
       localStorage.clear();
       sessionStorage.clear();
@@ -729,6 +733,7 @@ export default function App() {
     const targetReceipt = receipts.find((r) => r.id === receiptId);
     if (!targetReceipt) return;
 
+    hapticFeedback('delete');
     setReceipts((prev) => {
       const updated = prev.filter((r) => r.id !== receiptId);
       try {
@@ -755,6 +760,7 @@ export default function App() {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
+      hapticFeedback('scan');
       showSnackbar('Scanning with Gemini AI (blur & perspective correction)...', 'Scanning Receipt', 'info');
       const { receipt, engine } = await scanReceiptWithAiOrFallback(file);
       handleReceiptsAdded(
@@ -930,6 +936,300 @@ export default function App() {
     }
   };
 
+  const renderInitialState = (inDesktopPanel = false) => (
+    <div className={`flex flex-col justify-center items-center text-center w-full mx-auto ${inDesktopPanel ? 'py-8' : 'pt-10 pb-24 max-w-xl'}`}>
+      {/* Centered Brand Title */}
+      <div className="mb-8 flex flex-col items-center">
+        <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-m3-on-background">
+          <span>Rec</span><span className="text-m3-primary">o</span>
+        </h2>
+        <p className="text-xs sm:text-sm text-m3-on-surface-variant opacity-50 mt-1.5 whitespace-nowrap">
+          Costco Wholesale Receipt Search
+        </p>
+      </div>
+
+      {/* Centered Search Bar */}
+      <div className="w-full relative max-w-lg mb-4">
+        <Search className="w-5 h-5 text-m3-on-surface-variant absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+        <input
+          ref={searchInputRef}
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search by item # or name..."
+          className="w-full pl-12 pr-11 py-4 bg-m3-surface-container-high hover:bg-m3-surface-container-highest focus:bg-m3-surface-container-highest border border-transparent focus:border-m3-primary focus:ring-4 focus:ring-m3-primary/20 rounded-full text-sm sm:text-base text-m3-on-surface placeholder:text-m3-on-surface-variant shadow-xs transition-all"
+          autoFocus
+        />
+        {searchQuery && (
+          <motion.button
+            whileTap={{ scale: 0.88 }}
+            onClick={() => {
+              hapticFeedback('selection');
+              setSearchQuery('');
+            }}
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-m3-on-surface-variant hover:text-m3-on-surface p-1.5 cursor-pointer rounded-full hover:bg-m3-surface-container-lowest transition-colors"
+            aria-label="Clear search"
+          >
+            <X className="w-4 h-4" />
+          </motion.button>
+        )}
+      </div>
+
+      {/* Channel Filters */}
+      <div className="flex items-center gap-1.5 bg-m3-surface-container-high p-1 rounded-full border border-m3-outline-variant/40 text-xs">
+        <motion.button
+          whileTap={{ scale: 0.95 }}
+          onClick={() => {
+            hapticFeedback('selection');
+            setSelectedChannel('all');
+          }}
+          className={`px-3.5 py-1.5 rounded-full font-medium transition-all cursor-pointer ${
+            selectedChannel === 'all'
+              ? 'bg-m3-secondary-container text-m3-on-secondary-container shadow-xs font-semibold'
+              : 'text-m3-on-surface-variant hover:text-m3-on-surface hover:bg-m3-surface-container-highest/60'
+          }`}
+        >
+          All Purchases
+        </motion.button>
+        <motion.button
+          whileTap={{ scale: 0.95 }}
+          onClick={() => {
+            hapticFeedback('selection');
+            setSelectedChannel('Warehouse');
+          }}
+          className={`px-3.5 py-1.5 rounded-full font-medium transition-all cursor-pointer ${
+            selectedChannel === 'Warehouse'
+              ? 'bg-m3-secondary-container text-m3-on-secondary-container shadow-xs font-semibold'
+              : 'text-m3-on-surface-variant hover:text-m3-on-surface hover:bg-m3-surface-container-highest/60'
+          }`}
+        >
+          Warehouse
+        </motion.button>
+        <motion.button
+          whileTap={{ scale: 0.95 }}
+          onClick={() => {
+            hapticFeedback('selection');
+            setSelectedChannel('Online');
+          }}
+          className={`px-3.5 py-1.5 rounded-full font-medium transition-all cursor-pointer ${
+            selectedChannel === 'Online'
+              ? 'bg-m3-secondary-container text-m3-on-secondary-container shadow-xs font-semibold'
+              : 'text-m3-on-surface-variant hover:text-m3-on-surface hover:bg-m3-surface-container-highest/60'
+          }`}
+        >
+          Online
+        </motion.button>
+      </div>
+
+      {/* Action Buttons on Desktop */}
+      {inDesktopPanel && (
+        <div className="flex items-center justify-center gap-2.5 mt-6 flex-wrap">
+          <button
+            type="button"
+            onClick={() => {
+              hapticFeedback('medium');
+              setScannerInitialMode('standard');
+              setIsCameraScannerOpen(true);
+            }}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-m3-primary text-m3-on-primary text-xs font-semibold hover:bg-m3-primary/90 transition-colors cursor-pointer shadow-xs"
+          >
+            <Camera className="w-4 h-4" />
+            <span>Scan Receipt</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              hapticFeedback('medium');
+              setIsUploadModalOpen(true);
+            }}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-m3-surface-container-high hover:bg-m3-surface-container-highest text-m3-on-surface border border-m3-outline-variant/50 text-xs font-semibold transition-colors cursor-pointer shadow-2xs"
+          >
+            <Upload className="w-4 h-4" />
+            <span>Upload Data</span>
+          </button>
+        </div>
+      )}
+
+      {/* Empty State / Status Footer */}
+      {receipts.length === 0 ? (
+        <div className="mt-8 p-4 rounded-2xl bg-m3-surface-container-low border border-m3-outline-variant/40 text-center max-w-sm">
+          <p className="text-xs text-m3-on-surface-variant leading-relaxed mb-3">
+            No receipts recorded yet. Scan a paper receipt or upload your order data.
+          </p>
+          <div className="flex items-center justify-center gap-2">
+            <motion.button
+              whileTap={{ scale: 0.96 }}
+              onClick={handleLoadDemoData}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-m3-surface-container-high hover:bg-m3-surface-container-highest text-m3-primary border border-m3-outline-variant/50 text-xs font-semibold transition-colors cursor-pointer shadow-2xs"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-m3-tertiary" />
+              <span>Load Demo Purchases</span>
+            </motion.button>
+          </div>
+        </div>
+      ) : (
+        <div className="w-full max-w-md mt-6 space-y-4">
+          <button
+            type="button"
+            onClick={() => {
+              setSettingsInitialTab('ai');
+              setIsSettingsOpen(true);
+            }}
+            title="View local database and on-device AI status"
+            className="mx-auto text-xs text-m3-on-surface-variant flex items-center justify-center gap-1.5 pt-1 hover:text-m3-primary transition-colors cursor-pointer group"
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform" />
+            <span className="group-hover:underline">
+              {receipts.length} receipt{receipts.length === 1 ? '' : 's'} • {allItems.length} item{allItems.length === 1 ? '' : 's'} indexed on-device
+            </span>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderSearchState = (inDesktopPanel = false) => (
+    <div className={`flex flex-col space-y-4 w-full ${inDesktopPanel ? 'py-4' : 'pt-6 pb-24 max-w-xl mx-auto'}`}>
+      {/* Top Search Bar */}
+      <div className="relative">
+        <Search className="w-5 h-5 text-m3-primary absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search by item # or name..."
+          className="w-full pl-12 pr-11 py-3.5 bg-m3-surface-container-high hover:bg-m3-surface-container-highest focus:bg-m3-surface-container-highest border border-transparent focus:border-m3-primary focus:ring-2 focus:ring-m3-primary/30 rounded-full text-sm text-m3-on-surface placeholder:text-m3-on-surface-variant shadow-xs transition-all"
+          autoFocus
+        />
+        {searchQuery && (
+          <motion.button
+            whileTap={{ scale: 0.88 }}
+            onClick={() => setSearchQuery('')}
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-m3-on-surface-variant hover:text-m3-on-surface p-1.5 cursor-pointer rounded-full hover:bg-m3-surface-container-lowest transition-colors"
+            aria-label="Clear search"
+          >
+            <X className="w-4 h-4" />
+          </motion.button>
+        )}
+      </div>
+
+      {/* Search Header Row */}
+      <div className="flex items-center justify-between gap-2 text-xs sm:text-sm pt-1 flex-wrap">
+        <div className="text-m3-on-surface-variant font-medium">
+          <span>Found </span>
+          <strong className="text-m3-on-surface font-bold">{filteredItems.length}</strong>
+          <span> purchase{filteredItems.length === 1 ? '' : 's'}</span>
+        </div>
+
+        {/* Channel Filter Pills */}
+        <div className="flex items-center gap-1 bg-m3-surface-container-high p-1 rounded-full border border-m3-outline-variant/40">
+          <button
+            type="button"
+            onClick={() => setSelectedChannel('all')}
+            className={`px-3 py-1 rounded-full font-semibold transition-all cursor-pointer text-xs ${
+              selectedChannel === 'all'
+                ? 'bg-m3-secondary-container text-m3-on-secondary-container shadow-xs'
+                : 'text-m3-on-surface-variant hover:text-m3-on-surface'
+            }`}
+          >
+            All
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelectedChannel('Warehouse')}
+            className={`px-3 py-1 rounded-full font-semibold transition-all cursor-pointer text-xs ${
+              selectedChannel === 'Warehouse'
+                ? 'bg-m3-secondary-container text-m3-on-secondary-container shadow-xs'
+                : 'text-m3-on-surface-variant hover:text-m3-on-surface'
+            }`}
+          >
+            Warehouse
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelectedChannel('Online')}
+            className={`px-3 py-1 rounded-full font-semibold transition-all cursor-pointer text-xs ${
+              selectedChannel === 'Online'
+                ? 'bg-m3-secondary-container text-m3-on-secondary-container shadow-xs'
+                : 'text-m3-on-surface-variant hover:text-m3-on-surface'
+            }`}
+          >
+            Online
+          </button>
+        </div>
+      </div>
+
+      {/* Desktop action buttons */}
+      {inDesktopPanel && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={() => {
+              setScannerInitialMode('standard');
+              setIsCameraScannerOpen(true);
+            }}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-m3-surface-container-high hover:bg-m3-surface-container-highest text-m3-on-surface border border-m3-outline-variant/50 text-xs font-semibold transition-colors cursor-pointer shadow-2xs"
+          >
+            <Camera className="w-3.5 h-3.5 text-m3-primary" />
+            <span>Scan Receipt</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsUploadModalOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-m3-surface-container-high hover:bg-m3-surface-container-highest text-m3-on-surface border border-m3-outline-variant/50 text-xs font-semibold transition-colors cursor-pointer shadow-2xs"
+          >
+            <Upload className="w-3.5 h-3.5 text-m3-secondary" />
+            <span>Upload</span>
+          </button>
+        </div>
+      )}
+
+      {/* Price Trends Banner */}
+      {matchingTrendItems.length > 0 && (
+        <SearchPriceTrendBanner
+          trends={matchingTrendItems}
+          onViewReceipt={(orderId) => setSelectedReceiptId(orderId)}
+        />
+      )}
+
+      {/* Results List: Grid Cards */}
+      <div className="pt-1">
+        {filteredItems.length === 0 ? (
+          <div className="bg-m3-surface-container-lowest dark:bg-m3-surface-container-low rounded-3xl border border-m3-outline-variant/60 p-8 text-center space-y-3">
+            <Search className="w-8 h-8 text-m3-outline mx-auto" />
+            <h3 className="text-sm sm:text-base font-semibold text-m3-on-surface">
+              No purchases matching "{searchQuery}"
+            </h3>
+            <p className="text-xs text-m3-on-surface-variant max-w-sm mx-auto leading-relaxed">
+              Try searching with an Item ID, brand name, product title, or payment card digits.
+            </p>
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setSearchQuery('')}
+              className="mt-2 inline-block px-4 py-2 rounded-full bg-m3-secondary-container text-m3-on-secondary-container hover:bg-m3-secondary-container/80 text-xs font-medium transition-colors cursor-pointer"
+            >
+              Clear Search
+            </motion.button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-3.5">
+            {filteredItems.map((item, idx) => (
+              <ItemCard
+                key={`${item.orderId || 'ord'}_${item.id || idx}_${item.itemId || idx}`}
+                item={item}
+                allItems={allItems}
+                onViewReceipt={(orderId) => setSelectedReceiptId(orderId)}
+                onReEnrich={(itemId, rawName) => handleReEnrichItem(itemId, rawName)}
+                onSearchKeyword={(keyword) => setSearchQuery(keyword)}
+                isEnriching={!!enrichingItemIds[item.itemId]}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
   const activeReceipt = receipts.find((r) => r.id === selectedReceiptId) || null;
 
   return (
@@ -989,782 +1289,52 @@ export default function App() {
         currentViewMode={viewModePref}
       />
 
-      {/* Main Content Area: Responsive Layout (Full-width stretched on Desktop, Centered on Mobile) */}
-      {!hasSearchQuery ? (
-        /* INITIAL STATE */
-        isDesktop ? (
-          /* DESKTOP INITIAL DASHBOARD: Full-Width Stretched Hero, Action Grid, Stats & Recent Purchases */
-          <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 flex flex-col space-y-10">
-            {/* Desktop Hero & Search Bar */}
-            <div className="flex flex-col items-center text-center space-y-5 max-w-4xl lg:max-w-5xl mx-auto w-full">
-              <div>
-                <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-m3-on-background">
-                  Costco Wholesale Receipt Search
-                </h2>
-                <p className="text-sm sm:text-base lg:text-lg text-m3-on-surface-variant mt-2 max-w-2xl mx-auto leading-relaxed">
-                  Search warehouse purchases, track unit prices & verify receipts with 100% on-device privacy
-                </p>
-              </div>
-
-              {/* Large Command-Center Search Bar */}
-              <div className="w-full relative">
-                <Search className="w-6 h-6 text-m3-primary absolute left-5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                <input
-                  ref={searchInputRef}
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search by item # (e.g. 56366), product name, brand, date, payment card..."
-                  className="w-full pl-14 sm:pl-16 pr-36 py-4.5 sm:py-5 bg-m3-surface-container-high hover:bg-m3-surface-container-highest focus:bg-m3-surface-container-highest border border-m3-outline-variant/50 focus:border-m3-primary focus:ring-4 focus:ring-m3-primary/20 rounded-2xl sm:rounded-3xl text-base sm:text-lg text-m3-on-surface placeholder:text-m3-on-surface-variant shadow-sm hover:shadow-md focus:shadow-lg transition-all"
-                  autoFocus
-                />
-                <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                  {searchQuery && (
-                    <motion.button
-                      whileTap={{ scale: 0.88 }}
-                      onClick={() => setSearchQuery('')}
-                      className="text-m3-on-surface-variant hover:text-m3-on-surface p-1.5 cursor-pointer rounded-full hover:bg-m3-surface-container-lowest transition-colors"
-                      aria-label="Clear search"
-                    >
-                      <X className="w-5 h-5" />
-                    </motion.button>
-                  )}
-                  <kbd className="hidden sm:inline-flex items-center gap-1 px-3 py-1.5 text-xs font-mono font-bold text-m3-on-surface-variant bg-m3-surface-container rounded-lg border border-m3-outline-variant/50 shadow-2xs">
-                    ⌘K / Ctrl+K
-                  </kbd>
-                </div>
-              </div>
-
-              {/* Desktop Channel & Quick Category Chips */}
-              <div className="flex items-center justify-center gap-3 flex-wrap text-sm pt-1">
-                {/* Channels */}
-                <div className="flex items-center gap-1.5 bg-m3-surface-container-high p-1.5 rounded-full border border-m3-outline-variant/40 shadow-2xs">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedChannel('all')}
-                    className={`px-4 py-2 rounded-full font-semibold transition-all cursor-pointer ${
-                      selectedChannel === 'all'
-                        ? 'bg-m3-secondary-container text-m3-on-secondary-container shadow-xs'
-                        : 'text-m3-on-surface-variant hover:text-m3-on-surface'
-                    }`}
-                  >
-                    All Purchases
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedChannel('Warehouse')}
-                    className={`px-4 py-2 rounded-full font-semibold transition-all cursor-pointer ${
-                      selectedChannel === 'Warehouse'
-                        ? 'bg-m3-secondary-container text-m3-on-secondary-container shadow-xs'
-                        : 'text-m3-on-surface-variant hover:text-m3-on-surface'
-                    }`}
-                  >
-                    Warehouse Register
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedChannel('Online')}
-                    className={`px-4 py-2 rounded-full font-semibold transition-all cursor-pointer ${
-                      selectedChannel === 'Online'
-                        ? 'bg-m3-secondary-container text-m3-on-secondary-container shadow-xs'
-                        : 'text-m3-on-surface-variant hover:text-m3-on-surface'
-                    }`}
-                  >
-                    Costco.com Online
-                  </button>
-                </div>
-
-                {/* Popular Search Shortcuts */}
-                <div className="hidden lg:flex items-center gap-2 text-m3-on-surface-variant text-xs pl-2">
-                  <span className="opacity-80 font-medium">Quick filters:</span>
-                  {['Kirkland Signature', 'Groceries', 'Fuel', 'Electronics', 'Gift Cards', 'Returns'].map((tag) => (
-                    <button
-                      key={tag}
-                      type="button"
-                      onClick={() => setSearchQuery(tag)}
-                      className="px-3.5 py-1.5 rounded-full bg-m3-surface-container hover:bg-m3-surface-container-highest border border-m3-outline-variant/40 text-m3-on-surface font-medium hover:border-m3-primary/50 hover:shadow-2xs transition-all cursor-pointer"
-                    >
-                      {tag}
-                    </button>
-                  ))}
-                </div>
+      {/* Main Content Area: Two-Column on Desktop (Left: Mobile View, Right: Expanded Summary), Single-Column on Mobile */}
+      {isDesktop ? (
+        <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-16">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            {/* Left Panel: Same as mobile view */}
+            <div className="lg:col-span-6 flex flex-col min-w-0">
+              <div className="w-full max-w-xl mx-auto">
+                {!hasSearchQuery ? renderInitialState(true) : renderSearchState(true)}
               </div>
             </div>
 
-            {/* Desktop Primary Action Grid (4 Substantial Interactive Cards) */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 lg:gap-6">
-              {/* Card 1: Scan Paper Receipt */}
-              <motion.div
-                whileHover={{ y: -3 }}
-                className="bg-m3-surface-container-lowest dark:bg-m3-surface-container-low rounded-3xl border border-m3-outline-variant/50 p-6 lg:p-7 flex flex-col justify-between shadow-xs hover:border-m3-primary/60 hover:shadow-lg transition-all cursor-pointer group"
-                onClick={() => {
-                  setScannerInitialMode('standard');
-                  setIsCameraScannerOpen(true);
-                }}
-              >
-                <div className="space-y-4">
-                  <div className="w-14 h-14 rounded-2xl bg-m3-primary-container text-m3-on-primary-container flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
-                    <Camera className="w-7 h-7 text-m3-primary" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-base lg:text-lg text-m3-on-surface">Scan Paper Receipt</h3>
-                    <p className="text-sm text-m3-on-surface-variant mt-1.5 leading-relaxed">
-                      Webcam or high-res receipt capture with instant on-device OCR.
-                    </p>
-                  </div>
-                </div>
-                <div className="mt-6 pt-4 border-t border-m3-outline-variant/30 flex items-center justify-between text-sm font-semibold text-m3-primary">
-                  <span className="group-hover:underline">Open Scanner</span>
-                  <kbd className="px-2 py-1 bg-m3-surface-container text-m3-on-surface-variant rounded font-mono text-xs font-bold border border-m3-outline-variant/40 shadow-2xs">
-                    S
-                  </kbd>
-                </div>
-              </motion.div>
-
-              {/* Card 2: Upload Invoices / PDF */}
-              <motion.div
-                whileHover={{ y: -3 }}
-                className="bg-m3-surface-container-lowest dark:bg-m3-surface-container-low rounded-3xl border border-m3-outline-variant/50 p-6 lg:p-7 flex flex-col justify-between shadow-xs hover:border-m3-secondary/60 hover:shadow-lg transition-all cursor-pointer group"
-                onClick={() => setIsUploadModalOpen(true)}
-              >
-                <div className="space-y-4">
-                  <div className="w-14 h-14 rounded-2xl bg-m3-secondary-container text-m3-on-secondary-container flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
-                    <Upload className="w-7 h-7 text-m3-secondary" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-base lg:text-lg text-m3-on-surface">Upload Invoices & Data</h3>
-                    <p className="text-sm text-m3-on-surface-variant mt-1.5 leading-relaxed">
-                      Drag & drop Costco PDF e-invoices, photos, or JSON backups.
-                    </p>
-                  </div>
-                </div>
-                <div className="mt-6 pt-4 border-t border-m3-outline-variant/30 flex items-center justify-between text-sm font-semibold text-m3-secondary">
-                  <span className="group-hover:underline">Upload Files</span>
-                  <kbd className="px-2 py-1 bg-m3-surface-container text-m3-on-surface-variant rounded font-mono text-xs font-bold border border-m3-outline-variant/40 shadow-2xs">
-                    U
-                  </kbd>
-                </div>
-              </motion.div>
-
-              {/* Card 3: Summary & Rewards */}
-              <motion.div
-                whileHover={{ y: -3 }}
-                id="desktop-dashboard-summary-card"
-                className="bg-m3-surface-container-lowest dark:bg-m3-surface-container-low rounded-3xl border border-m3-outline-variant/50 p-6 lg:p-7 flex flex-col justify-between shadow-xs hover:border-m3-tertiary/60 hover:shadow-lg transition-all cursor-pointer group"
-                onClick={() => setIsSummaryOpen(true)}
-              >
-                <div className="space-y-4">
-                  <div className="w-14 h-14 rounded-2xl bg-m3-tertiary-container text-m3-on-tertiary-container flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
-                    <PieChart className="w-7 h-7 text-m3-tertiary" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-base lg:text-lg text-m3-on-surface">Summary & Rewards</h3>
-                    <p className="text-sm text-m3-on-surface-variant mt-1.5 leading-relaxed">
-                      Calculate 2% Executive rewards and analyze category spending.
-                    </p>
-                  </div>
-                </div>
-                <div className="mt-6 pt-4 border-t border-m3-outline-variant/30 flex items-center justify-between text-sm font-semibold text-m3-tertiary">
-                  <span className="group-hover:underline">Open Summary</span>
-                  <div className="flex items-center gap-1.5">
-                    <kbd className="px-2 py-1 bg-m3-surface-container text-m3-on-surface-variant rounded font-mono text-xs font-bold border border-m3-outline-variant/40 shadow-2xs">
-                      M
-                    </kbd>
-                    <ChevronRight className="w-4 h-4" />
-                  </div>
-                </div>
-              </motion.div>
-
-              {/* Card 4: Backup & Drive Sync */}
-              <motion.div
-                whileHover={{ y: -3 }}
-                className="bg-m3-surface-container-lowest dark:bg-m3-surface-container-low rounded-3xl border border-m3-outline-variant/50 p-6 lg:p-7 flex flex-col justify-between shadow-xs hover:border-emerald-500/60 hover:shadow-lg transition-all cursor-pointer group"
-                onClick={() => {
-                  setSettingsInitialTab('backup');
+            {/* Right Panel: Summary view expanded */}
+            <div className="lg:col-span-6 sticky top-20 max-h-[calc(100vh-10rem)] flex flex-col">
+              <SummaryDrawer
+                isOpen={true}
+                inline={true}
+                onClose={() => {}}
+                receipts={receipts}
+                items={allItems}
+                themeMode={themeMode}
+                onSelectThemeMode={handleSelectThemeMode}
+                onOpenPalettes={() => {
+                  setSettingsInitialTab('theme');
                   setIsSettingsOpen(true);
                 }}
-              >
-                <div className="space-y-4">
-                  <div className="w-14 h-14 rounded-2xl bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
-                    <HardDrive className="w-7 h-7 text-emerald-600 dark:text-emerald-400" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-base lg:text-lg text-m3-on-surface">Backup & Drive Sync</h3>
-                    <p className="text-sm text-m3-on-surface-variant mt-1.5 leading-relaxed">
-                      Air-gapped export, Google Drive sync, and theme customization.
-                    </p>
-                  </div>
-                </div>
-                <div className="mt-6 pt-4 border-t border-m3-outline-variant/30 flex items-center justify-between text-sm font-semibold text-emerald-600 dark:text-emerald-400">
-                  <span className="group-hover:underline">Open Settings</span>
-                  <div className="flex items-center gap-1.5">
-                    <kbd className="px-2 py-1 bg-m3-surface-container text-m3-on-surface-variant rounded font-mono text-xs font-bold border border-m3-outline-variant/40 shadow-2xs">
-                      B
-                    </kbd>
-                    <ChevronRight className="w-4 h-4" />
-                  </div>
-                </div>
-              </motion.div>
-            </div>
-
-            {/* Desktop Metrics & Purchase Overview */}
-            {receipts.length > 0 ? (
-              <div className="space-y-6">
-                {/* Metric Row Header with Direct Summary Button */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-lg lg:text-xl font-bold text-m3-on-surface">Spending & Rewards Overview</h3>
-                    <p className="text-xs sm:text-sm text-m3-on-surface-variant mt-0.5">
-                      Real-time totals across your {receipts.length} Costco warehouse & online receipts
-                    </p>
-                  </div>
-                  <motion.button
-                    whileTap={{ scale: 0.94 }}
-                    id="desktop-overview-summary-btn"
-                    onClick={() => setIsSummaryOpen(true)}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-m3-secondary-container hover:bg-m3-secondary-container/85 text-m3-on-secondary-container border border-m3-outline-variant/40 text-sm font-semibold transition-all cursor-pointer shadow-2xs hover:shadow-xs"
-                    title="Open spending summary drawer"
-                  >
-                    <PieChart className="w-4 h-4 text-m3-primary" />
-                    <span>View Full Summary</span>
-                    <ChevronRight className="w-4 h-4" />
-                  </motion.button>
-                </div>
-
-                {/* 4-Stat Metric Row (Clickable cards to open summary) */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-                  <div
-                    onClick={() => setIsSummaryOpen(true)}
-                    className="p-5 lg:p-6 rounded-3xl bg-m3-surface-container-low border border-m3-outline-variant/40 shadow-xs hover:border-emerald-500/50 hover:bg-m3-surface-container transition-all cursor-pointer group"
-                    title="Click to view detailed spending summary"
-                  >
-                    <div className="flex items-center justify-between text-xs sm:text-sm text-m3-on-surface-variant font-medium">
-                      <span>Total Costco Spend</span>
-                      <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                        <DollarSign className="w-4 h-4 text-emerald-500 group-hover:scale-110 transition-transform" />
-                      </div>
-                    </div>
-                    <p className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-m3-on-surface mt-2 tracking-tight">
-                      ${totalSpend.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </p>
-                    <p className="text-xs text-m3-on-surface-variant mt-1 group-hover:text-m3-primary transition-colors">
-                      Across {receipts.length} recorded receipt{receipts.length === 1 ? '' : 's'} • Breakdown →
-                    </p>
-                  </div>
-
-                  <div className="p-5 lg:p-6 rounded-3xl bg-m3-surface-container-low border border-m3-outline-variant/40 shadow-xs">
-                    <div className="flex items-center justify-between text-xs sm:text-sm text-m3-on-surface-variant font-medium">
-                      <span>Receipts Recorded</span>
-                      <div className="w-8 h-8 rounded-lg bg-m3-primary/10 flex items-center justify-center">
-                        <ReceiptIcon className="w-4 h-4 text-m3-primary" />
-                      </div>
-                    </div>
-                    <p className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-m3-on-surface mt-2 tracking-tight">
-                      {receipts.length}
-                    </p>
-                    <p className="text-xs text-m3-on-surface-variant mt-1">
-                      {warehouseCount} In-Store • {onlineCount} Online
-                    </p>
-                  </div>
-
-                  <div className="p-5 lg:p-6 rounded-3xl bg-m3-surface-container-low border border-m3-outline-variant/40 shadow-xs">
-                    <div className="flex items-center justify-between text-xs sm:text-sm text-m3-on-surface-variant font-medium">
-                      <span>Indexed Items</span>
-                      <div className="w-8 h-8 rounded-lg bg-m3-secondary/10 flex items-center justify-center">
-                        <Tag className="w-4 h-4 text-m3-secondary" />
-                      </div>
-                    </div>
-                    <p className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-m3-on-surface mt-2 tracking-tight">
-                      {allItems.length}
-                    </p>
-                    <p className="text-xs text-m3-on-surface-variant mt-1">
-                      100% on-device searchable
-                    </p>
-                  </div>
-
-                  <div
-                    onClick={() => setIsSummaryOpen(true)}
-                    className="p-5 lg:p-6 rounded-3xl bg-m3-surface-container-low border border-m3-outline-variant/40 shadow-xs hover:border-amber-500/50 hover:bg-m3-surface-container transition-all cursor-pointer group"
-                    title="Click to view Executive 2% reward calculations"
-                  >
-                    <div className="flex items-center justify-between text-xs sm:text-sm text-m3-on-surface-variant font-medium">
-                      <span>Est. 2% Executive Reward</span>
-                      <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
-                        <Sparkles className="w-4 h-4 text-amber-500 group-hover:scale-110 transition-transform" />
-                      </div>
-                    </div>
-                    <p className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-amber-600 dark:text-amber-400 mt-2 tracking-tight">
-                      ${totalExecutiveReward.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </p>
-                    <p className="text-xs text-m3-on-surface-variant mt-1 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
-                      + ${totalInstantSavings.toFixed(2)} savings • View rewards →
-                    </p>
-                  </div>
-                </div>
-
-                {/* Recent Costco Purchases Section (3-column Desktop Grid) */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-base font-bold text-m3-on-surface">Recent Costco Purchases</h3>
-                      <p className="text-xs text-m3-on-surface-variant mt-0.5">
-                        Showing latest purchases • Search above or click item to view full receipt
-                      </p>
-                    </div>
-                    <motion.button
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => setIsSummaryOpen(true)}
-                      className="text-xs font-semibold text-m3-primary hover:underline flex items-center gap-1 cursor-pointer"
-                    >
-                      <span>View spending breakdown</span>
-                      <ChevronRight className="w-3.5 h-3.5" />
-                    </motion.button>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4.5">
-                    {allItems.slice(0, 6).map((item, idx) => (
-                      <ItemCard
-                        key={`${item.orderId || 'ord'}_${item.id || idx}_${item.itemId || idx}`}
-                        item={item}
-                        allItems={allItems}
-                        onViewReceipt={(orderId) => setSelectedReceiptId(orderId)}
-                        onReEnrich={(itemId, rawName) => handleReEnrichItem(itemId, rawName)}
-                        onSearchKeyword={(keyword) => setSearchQuery(keyword)}
-                        isEnriching={!!enrichingItemIds[item.itemId]}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </div>
-            ) : (
-              /* Desktop Empty State */
-              <div className="bg-m3-surface-container-low border border-m3-outline-variant/40 rounded-3xl p-8 text-center max-w-lg mx-auto space-y-3">
-                <ReceiptIcon className="w-10 h-10 text-m3-primary mx-auto opacity-75" />
-                <h3 className="font-bold text-base text-m3-on-surface">No Receipts Recorded Yet</h3>
-                <p className="text-xs text-m3-on-surface-variant leading-relaxed">
-                  Get started by scanning a paper Costco receipt, uploading an online PDF invoice, or loading demo purchases.
-                </p>
-                <div className="pt-2 flex items-center justify-center gap-2">
-                  <button
-                    type="button"
-                    onClick={handleLoadDemoData}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-m3-primary text-m3-on-primary text-xs font-semibold hover:bg-m3-primary/90 transition-colors cursor-pointer shadow-xs"
-                  >
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span>Load Demo Costco Purchases</span>
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Desktop Subtle Footer Status Bar */}
-            <div className="pt-6 border-t border-m3-outline-variant/30 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-m3-on-surface-variant/75">
-              <span>Designed in 🇨🇦 by Aniket Vasishth</span>
-              <div className="flex items-center gap-3">
-                <span>Keyboard: ⌘K Search • Esc Clear • S Scan • U Upload</span>
-              </div>
-              <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span>100% On-Device Private Sandbox</span>
-              </div>
-            </div>
-          </main>
-        ) : (
-          /* MOBILE INITIAL STATE: Compact Centered Single-Column Layout */
-          <main className="flex-1 flex flex-col justify-center items-center px-4 sm:px-6 pt-10 pb-24 max-w-xl mx-auto w-full text-center">
-            {/* Centered Brand Title */}
-            <div className="mb-8 flex flex-col items-center">
-              <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-m3-on-background">
-                Reco
-              </h2>
-              <p className="text-xs sm:text-sm text-m3-on-surface-variant mt-1.5 whitespace-nowrap">
-                Costco Wholesale Receipt Search
-              </p>
-            </div>
-
-            {/* Centered Search Bar */}
-            <div className="w-full relative max-w-lg mb-4">
-              <Search className="w-5 h-5 text-m3-on-surface-variant absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <input
-                ref={searchInputRef}
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search item #, name, date, card..."
-                className="w-full pl-12 pr-11 py-4 bg-m3-surface-container-high hover:bg-m3-surface-container-highest focus:bg-m3-surface-container-highest border border-transparent focus:border-m3-primary focus:ring-4 focus:ring-m3-primary/20 rounded-full text-sm sm:text-base text-m3-on-surface placeholder:text-m3-on-surface-variant shadow-xs transition-all"
-                autoFocus
+                onSelectReceipt={(receiptId) => setSelectedReceiptId(receiptId)}
+                onOpenFeedback={() => {
+                  setFeedbackInitialError(null);
+                  setIsFeedbackModalOpen(true);
+                }}
+                onOpenSaveBackup={() => setIsSaveBackupOpen(true)}
+                onClearAllReceipts={handleClearAllReceipts}
+                onDeleteReceipt={handleDeleteReceipt}
+                onOpenInstall={handleOpenInstall}
+                isInstalled={isInstalled}
+                onLoadDemo={handleLoadDemoData}
+                isImmersive={isImmersive}
+                onToggleImmersive={handleToggleImmersive}
+                onSearchItemId={(itemId) => setSearchQuery(itemId)}
               />
-              {searchQuery && (
-                <motion.button
-                  whileTap={{ scale: 0.88 }}
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-m3-on-surface-variant hover:text-m3-on-surface p-1.5 cursor-pointer rounded-full hover:bg-m3-surface-container-lowest transition-colors"
-                  aria-label="Clear search"
-                >
-                  <X className="w-4 h-4" />
-                </motion.button>
-              )}
             </div>
-
-            {/* Channel Filters */}
-            <div className="flex items-center gap-1.5 bg-m3-surface-container-high p-1 rounded-full border border-m3-outline-variant/40 text-xs">
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setSelectedChannel('all')}
-                className={`px-3.5 py-1.5 rounded-full font-medium transition-all cursor-pointer ${
-                  selectedChannel === 'all'
-                    ? 'bg-m3-secondary-container text-m3-on-secondary-container shadow-xs font-semibold'
-                    : 'text-m3-on-surface-variant hover:text-m3-on-surface hover:bg-m3-surface-container-highest/60'
-                }`}
-              >
-                All Purchases
-              </motion.button>
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setSelectedChannel('Warehouse')}
-                className={`px-3.5 py-1.5 rounded-full font-medium transition-all cursor-pointer ${
-                  selectedChannel === 'Warehouse'
-                    ? 'bg-m3-secondary-container text-m3-on-secondary-container shadow-xs font-semibold'
-                    : 'text-m3-on-surface-variant hover:text-m3-on-surface hover:bg-m3-surface-container-highest/60'
-                }`}
-              >
-                Warehouse
-              </motion.button>
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setSelectedChannel('Online')}
-                className={`px-3.5 py-1.5 rounded-full font-medium transition-all cursor-pointer ${
-                  selectedChannel === 'Online'
-                    ? 'bg-m3-secondary-container text-m3-on-secondary-container shadow-xs font-semibold'
-                    : 'text-m3-on-surface-variant hover:text-m3-on-surface hover:bg-m3-surface-container-highest/60'
-                }`}
-              >
-                Online
-              </motion.button>
-            </div>
-
-            {/* Local Status Indicator & Empty State Prompt */}
-            {receipts.length === 0 ? (
-              <div className="mt-7 p-4 sm:p-5 rounded-3xl bg-m3-surface-container-low border border-m3-outline-variant/35 max-w-sm w-full text-center space-y-3 shadow-2xs">
-                <p className="text-xs text-m3-on-surface-variant leading-relaxed">
-                  No receipts recorded yet. Scan a paper receipt or upload your order data below.
-                </p>
-                <div className="flex items-center justify-center gap-2 pt-0.5">
-                  <motion.button
-                    whileTap={{ scale: 0.96 }}
-                    onClick={handleLoadDemoData}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-m3-surface-container-high hover:bg-m3-surface-container-highest text-m3-primary border border-m3-outline-variant/50 text-xs font-semibold transition-colors cursor-pointer shadow-2xs"
-                  >
-                    <Sparkles className="w-3.5 h-3.5 text-m3-tertiary" />
-                    <span>Load Demo Purchases</span>
-                  </motion.button>
-                </div>
-              </div>
-            ) : (
-              <div className="w-full max-w-md mt-6 space-y-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSettingsInitialTab('ai');
-                    setIsSettingsOpen(true);
-                  }}
-                  title="View local database and on-device AI status"
-                  className="mx-auto text-xs text-m3-on-surface-variant flex items-center justify-center gap-1.5 pt-1 hover:text-m3-primary transition-colors cursor-pointer group"
-                >
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform" />
-                  <span className="group-hover:underline">
-                    {receipts.length} receipt{receipts.length === 1 ? '' : 's'} • {allItems.length} item{allItems.length === 1 ? '' : 's'} indexed on-device
-                  </span>
-                </button>
-              </div>
-            )}
-          </main>
-        )
+          </div>
+        </main>
       ) : (
-        /* ACTIVE SEARCH STATE: Stretched Full-Width Desktop or Adaptive Mobile */
-        <main className={`flex-1 w-full mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-24 flex flex-col space-y-4 no-scrollbar ${
-          isDesktop ? 'max-w-7xl' : 'max-w-xl'
-        }`}>
-          {/* Top Search Bar */}
-          <div className="relative">
-            <Search className="w-5 h-5 md:w-6 md:h-6 text-m3-primary absolute left-4 md:left-5 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search item #, name, date, card..."
-              className={`w-full bg-m3-surface-container-high hover:bg-m3-surface-container-highest focus:bg-m3-surface-container-highest border border-transparent focus:border-m3-primary focus:ring-2 focus:ring-m3-primary/30 rounded-full text-m3-on-surface placeholder:text-m3-on-surface-variant shadow-xs transition-all ${
-                isDesktop
-                  ? 'pl-14 pr-16 py-4 text-base font-medium rounded-2xl sm:rounded-3xl'
-                  : 'pl-12 pr-11 py-3.5 text-sm'
-              }`}
-              autoFocus
-            />
-            {searchQuery && (
-              <motion.button
-                whileTap={{ scale: 0.88 }}
-                onClick={() => setSearchQuery('')}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-m3-on-surface-variant hover:text-m3-on-surface p-1.5 cursor-pointer rounded-full hover:bg-m3-surface-container-lowest transition-colors"
-                aria-label="Clear search"
-              >
-                <X className="w-4 h-4 md:w-5 md:h-5" />
-              </motion.button>
-            )}
-          </div>
-
-          {/* Search Header Row & Desktop Controls */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs sm:text-sm pt-1">
-            <div className="flex items-center gap-2.5 flex-wrap">
-              <div className="text-m3-on-surface-variant font-medium text-xs sm:text-sm">
-                <span>Found </span>
-                <strong className="text-m3-on-surface font-bold text-sm sm:text-base">{filteredItems.length}</strong>
-                <span> purchase{filteredItems.length === 1 ? '' : 's'}</span>
-              </div>
-
-              {/* Channel Filter Pills */}
-              <div className="flex items-center gap-1.5 bg-m3-surface-container-high p-1 rounded-full border border-m3-outline-variant/40 ml-1">
-                <button
-                  type="button"
-                  onClick={() => setSelectedChannel('all')}
-                  className={`px-3.5 py-1.5 rounded-full font-semibold transition-all cursor-pointer text-xs sm:text-sm ${
-                    selectedChannel === 'all'
-                      ? 'bg-m3-secondary-container text-m3-on-secondary-container shadow-xs'
-                      : 'text-m3-on-surface-variant hover:text-m3-on-surface'
-                  }`}
-                >
-                  All
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedChannel('Warehouse')}
-                  className={`px-3.5 py-1.5 rounded-full font-semibold transition-all cursor-pointer text-xs sm:text-sm ${
-                    selectedChannel === 'Warehouse'
-                      ? 'bg-m3-secondary-container text-m3-on-secondary-container shadow-xs'
-                      : 'text-m3-on-surface-variant hover:text-m3-on-surface'
-                  }`}
-                >
-                  Warehouse
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedChannel('Online')}
-                  className={`px-3.5 py-1.5 rounded-full font-semibold transition-all cursor-pointer text-xs sm:text-sm ${
-                    selectedChannel === 'Online'
-                      ? 'bg-m3-secondary-container text-m3-on-secondary-container shadow-xs'
-                      : 'text-m3-on-surface-variant hover:text-m3-on-surface'
-                  }`}
-                >
-                  Online
-                </button>
-              </div>
-            </div>
-
-            {/* Desktop Specific Controls: Summary button, Sort Dropdown & Grid vs Table view toggle */}
-            {isDesktop && (
-              <div className="flex items-center gap-2.5">
-                {/* Summary Button in Search Toolbar */}
-                <motion.button
-                  whileTap={{ scale: 0.94 }}
-                  id="desktop-search-summary-btn"
-                  onClick={() => setIsSummaryOpen(true)}
-                  className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full bg-m3-secondary-container hover:bg-m3-secondary-container/85 text-m3-on-secondary-container text-xs sm:text-sm font-semibold border border-m3-outline-variant/40 shadow-2xs hover:shadow-xs transition-all cursor-pointer"
-                  title="View full spending summary and rewards (Press M)"
-                >
-                  <span>Summary</span>
-                  {filteredItems.length > 0 && (
-                    <span className="px-2 py-0.5 bg-m3-primary text-m3-on-primary text-[10px] md:text-xs rounded-full font-mono font-bold leading-none shadow-2xs">
-                      {filteredItems.length}
-                    </span>
-                  )}
-                </motion.button>
-
-                {/* Sort Selector */}
-                <div className="flex items-center gap-1.5 bg-m3-surface-container-high px-3 py-1.5 rounded-full border border-m3-outline-variant/40 shadow-2xs">
-                  <ArrowUpDown className="w-4 h-4 text-m3-on-surface-variant" />
-                  <select
-                    value={desktopSortBy}
-                    onChange={(e) => setDesktopSortBy(e.target.value as any)}
-                    className="bg-transparent text-xs sm:text-sm text-m3-on-surface font-medium outline-hidden cursor-pointer"
-                    aria-label="Sort purchases"
-                  >
-                    <option value="date-desc">Newest Date First</option>
-                    <option value="date-asc">Oldest Date First</option>
-                    <option value="price-desc">Price: High to Low</option>
-                    <option value="price-asc">Price: Low to High</option>
-                    <option value="name">Product Name A-Z</option>
-                  </select>
-                </div>
-
-                {/* View Layout Switcher (Grid vs Table) */}
-                <div className="flex items-center gap-1 bg-m3-surface-container-high p-1 rounded-full border border-m3-outline-variant/40 shadow-2xs">
-                  <button
-                    type="button"
-                    onClick={() => setDesktopResultLayout('grid')}
-                    className={`p-2 rounded-full transition-colors cursor-pointer ${
-                      desktopResultLayout === 'grid'
-                        ? 'bg-m3-secondary-container text-m3-on-secondary-container shadow-2xs'
-                        : 'text-m3-on-surface-variant hover:text-m3-on-surface'
-                    }`}
-                    title="Grid View (Cards)"
-                    aria-label="Grid view"
-                  >
-                    <LayoutGrid className="w-4 h-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDesktopResultLayout('table')}
-                    className={`p-2 rounded-full transition-colors cursor-pointer ${
-                      desktopResultLayout === 'table'
-                        ? 'bg-m3-secondary-container text-m3-on-secondary-container shadow-2xs'
-                        : 'text-m3-on-surface-variant hover:text-m3-on-surface'
-                    }`}
-                    title="Compact Table View"
-                    aria-label="Table view"
-                  >
-                    <TableIcon className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Price Trends Banner */}
-          {matchingTrendItems.length > 0 && (
-            <SearchPriceTrendBanner
-              trends={matchingTrendItems}
-              onViewReceipt={(orderId) => setSelectedReceiptId(orderId)}
-            />
-          )}
-
-          {/* Results List: Grid or Table View */}
-          <div className="pt-1">
-            {filteredItems.length === 0 ? (
-              <div className="bg-m3-surface-container-lowest dark:bg-m3-surface-container-low rounded-3xl border border-m3-outline-variant/60 p-10 text-center space-y-3">
-                <Search className="w-9 h-9 text-m3-outline mx-auto" />
-                <h3 className="text-base font-semibold text-m3-on-surface">
-                  No purchases matching "{searchQuery}"
-                </h3>
-                <p className="text-xs text-m3-on-surface-variant max-w-sm mx-auto leading-relaxed">
-                  Try searching with an Item ID (e.g. 56366), brand name, product title, or payment card digits.
-                </p>
-                <motion.button
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setSearchQuery('')}
-                  className="mt-2 inline-block px-4 py-2 rounded-full bg-m3-secondary-container text-m3-on-secondary-container hover:bg-m3-secondary-container/80 text-xs font-medium transition-colors cursor-pointer"
-                >
-                  Clear Search
-                </motion.button>
-              </div>
-            ) : isDesktop && desktopResultLayout === 'table' ? (
-              /* Desktop Table View */
-              <div className="bg-m3-surface-container-lowest dark:bg-m3-surface-container-low rounded-3xl border border-m3-outline-variant/60 overflow-hidden shadow-xs">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs sm:text-sm text-m3-on-surface">
-                    <thead className="bg-m3-surface-container-high/60 border-b border-m3-outline-variant/40 text-m3-on-surface-variant font-bold text-xs uppercase tracking-wider">
-                      <tr>
-                        <th className="py-3.5 px-5">Item #</th>
-                        <th className="py-3.5 px-5">Product Name & Category</th>
-                        <th className="py-3.5 px-4">Channel</th>
-                        <th className="py-3.5 px-4">Purchase Date</th>
-                        <th className="py-3.5 px-4 text-right">Unit Price</th>
-                        <th className="py-3.5 px-5 text-right">Total</th>
-                        <th className="py-3.5 px-4 text-center">Receipt</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-m3-outline-variant/30">
-                      {filteredItems.map((item, idx) => (
-                        <tr
-                          key={`${item.orderId || 'ord'}_${item.id || idx}_${item.itemId || idx}`}
-                          className="hover:bg-m3-surface-container-highest/40 transition-colors cursor-pointer"
-                          onClick={() => setSelectedReceiptId(item.orderId)}
-                        >
-                          <td className="py-3.5 px-5 font-mono font-bold text-m3-primary whitespace-nowrap">
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                navigator.clipboard.writeText(item.itemId);
-                                setTableCopiedId(item.itemId);
-                                setTimeout(() => setTableCopiedId(null), 1500);
-                              }}
-                              className="inline-flex items-center gap-1 hover:underline cursor-pointer"
-                              title="Click to copy Item ID"
-                            >
-                              <span>#{item.itemId}</span>
-                              {tableCopiedId === item.itemId ? (
-                                <Check className="w-3.5 h-3.5 text-emerald-500" />
-                              ) : (
-                                <Copy className="w-3.5 h-3.5 opacity-40 hover:opacity-100" />
-                              )}
-                            </button>
-                          </td>
-                          <td className="py-3.5 px-5 max-w-sm">
-                            <div className="font-semibold text-m3-on-surface text-sm truncate">
-                              {item.productName || item.rawName}
-                            </div>
-                            <div className="flex items-center gap-1.5 text-xs text-m3-on-surface-variant mt-0.5">
-                              {item.brand && <span className="font-medium text-m3-secondary">{item.brand}</span>}
-                              {item.category && <span>• {item.category}</span>}
-                              {item.warehouseLocation && <span>• {item.warehouseLocation}</span>}
-                            </div>
-                          </td>
-                          <td className="py-3.5 px-4 whitespace-nowrap">
-                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${
-                              item.orderType === 'Online'
-                                ? 'bg-m3-primary-container text-m3-on-primary-container border-m3-primary/30'
-                                : 'bg-m3-secondary-container text-m3-on-secondary-container border-m3-secondary/30'
-                            }`}>
-                              {item.orderType === 'Online' ? <Globe className="w-3 h-3" /> : <Store className="w-3 h-3" />}
-                              <span>{item.orderType}</span>
-                            </span>
-                          </td>
-                          <td className="py-3.5 px-4 whitespace-nowrap text-m3-on-surface-variant text-xs sm:text-sm">
-                            {item.orderDate}
-                          </td>
-                          <td className="py-3.5 px-4 text-right whitespace-nowrap font-mono text-xs sm:text-sm">
-                            ${(item.unitPrice || 0).toFixed(2)}
-                          </td>
-                          <td className="py-3.5 px-5 text-right whitespace-nowrap font-mono font-bold text-sm text-m3-on-surface">
-                            ${(item.totalPrice || 0).toFixed(2)}
-                          </td>
-                          <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedReceiptId(item.orderId);
-                              }}
-                              className="p-2 rounded-full hover:bg-m3-surface-container-highest text-m3-primary transition-colors cursor-pointer"
-                              title="View full receipt"
-                            >
-                              <ExternalLink className="w-4 h-4" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            ) : (
-              /* Grid View (Cards): 3 columns on Desktop, 1 column on Mobile */
-              <div className={`grid gap-5 lg:gap-6 ${
-                isDesktop ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1 space-y-3.5'
-              }`}>
-                {filteredItems.map((item, idx) => (
-                  <ItemCard
-                    key={`${item.orderId || 'ord'}_${item.id || idx}_${item.itemId || idx}`}
-                    item={item}
-                    allItems={allItems}
-                    onViewReceipt={(orderId) => setSelectedReceiptId(orderId)}
-                    onReEnrich={(itemId, rawName) => handleReEnrichItem(itemId, rawName)}
-                    onSearchKeyword={(keyword) => setSearchQuery(keyword)}
-                    isEnriching={!!enrichingItemIds[item.itemId]}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
+        <main className="flex-1 w-full mx-auto px-4 sm:px-6">
+          {!hasSearchQuery ? renderInitialState(false) : renderSearchState(false)}
         </main>
       )}
 
@@ -1776,6 +1346,7 @@ export default function App() {
             <motion.button
               whileTap={{ scale: 0.96 }}
               onClick={() => {
+                hapticFeedback('medium');
                 setScannerInitialMode('standard');
                 setIsCameraScannerOpen(true);
               }}
@@ -1789,26 +1360,15 @@ export default function App() {
             {/* M3 Filled Button */}
             <motion.button
               whileTap={{ scale: 0.96 }}
-              onClick={() => setIsUploadModalOpen(true)}
+              onClick={() => {
+                hapticFeedback('medium');
+                setIsUploadModalOpen(true);
+              }}
               className="flex-1 flex items-center justify-center gap-1.5 sm:gap-2 py-3 px-3 rounded-full bg-m3-primary hover:bg-m3-primary/90 text-m3-on-primary text-xs sm:text-sm font-semibold shadow-xs transition-all cursor-pointer truncate"
               title="Upload JSON, CSV, or receipt photos"
             >
               <Upload className="w-4 h-4 shrink-0" />
               <span className="truncate">Upload Data</span>
-            </motion.button>
-
-            {/* M3 Settings Gear Button */}
-            <motion.button
-              whileTap={{ scale: 0.92 }}
-              onClick={() => {
-                setSettingsInitialTab('backup');
-                setIsSettingsOpen(true);
-              }}
-              className="shrink-0 flex items-center justify-center w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-m3-surface-container-high hover:bg-m3-surface-container-highest text-m3-on-surface border border-m3-outline-variant/40 shadow-2xs transition-all cursor-pointer"
-              title="Settings (Backup, Theme & Storage)"
-              aria-label="Settings"
-            >
-              <Settings className="w-5 h-5 text-m3-on-surface" />
             </motion.button>
           </div>
         </footer>
@@ -1843,33 +1403,35 @@ export default function App() {
         onShowSnackbar={(msg, title) => showSnackbar(msg, title || 'Settings')}
       />
 
-      {/* Summary Drawer revealed on swipe to right or Header tap */}
-      <SummaryDrawer
-        isOpen={isSummaryOpen}
-        onClose={() => setIsSummaryOpen(false)}
-        receipts={receipts}
-        items={allItems}
-        themeMode={themeMode}
-        onSelectThemeMode={handleSelectThemeMode}
-        onOpenPalettes={() => {
-          setSettingsInitialTab('theme');
-          setIsSettingsOpen(true);
-        }}
-        onSelectReceipt={(receiptId) => setSelectedReceiptId(receiptId)}
-        onOpenFeedback={() => {
-          setFeedbackInitialError(null);
-          setIsFeedbackModalOpen(true);
-        }}
-        onOpenSaveBackup={() => setIsSaveBackupOpen(true)}
-        onClearAllReceipts={handleClearAllReceipts}
-        onDeleteReceipt={handleDeleteReceipt}
-        onOpenInstall={handleOpenInstall}
-        isInstalled={isInstalled}
-        onLoadDemo={handleLoadDemoData}
-        isImmersive={isImmersive}
-        onToggleImmersive={handleToggleImmersive}
-        onSearchItemId={(itemId) => setSearchQuery(itemId)}
-      />
+      {/* Summary Drawer revealed on swipe to right or Header tap (mobile only) */}
+      {!isDesktop && (
+        <SummaryDrawer
+          isOpen={isSummaryOpen}
+          onClose={() => setIsSummaryOpen(false)}
+          receipts={receipts}
+          items={allItems}
+          themeMode={themeMode}
+          onSelectThemeMode={handleSelectThemeMode}
+          onOpenPalettes={() => {
+            setSettingsInitialTab('theme');
+            setIsSettingsOpen(true);
+          }}
+          onSelectReceipt={(receiptId) => setSelectedReceiptId(receiptId)}
+          onOpenFeedback={() => {
+            setFeedbackInitialError(null);
+            setIsFeedbackModalOpen(true);
+          }}
+          onOpenSaveBackup={() => setIsSaveBackupOpen(true)}
+          onClearAllReceipts={handleClearAllReceipts}
+          onDeleteReceipt={handleDeleteReceipt}
+          onOpenInstall={handleOpenInstall}
+          isInstalled={isInstalled}
+          onLoadDemo={handleLoadDemoData}
+          isImmersive={isImmersive}
+          onToggleImmersive={handleToggleImmersive}
+          onSearchItemId={(itemId) => setSearchQuery(itemId)}
+        />
+      )}
 
       {/* Save & Backup Modal (File System & Google Drive) */}
       <SaveBackupModal

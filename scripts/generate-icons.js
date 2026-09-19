@@ -1,114 +1,141 @@
-const opentype = require('opentype.js');
-const fs = require('fs');
-const path = require('path');
-const sharp = require('sharp');
+import fs from 'fs';
+import path from 'path';
+import sharp from 'sharp';
 
-const fontPath = '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf';
-const fontBuffer = fs.readFileSync(fontPath);
-const font = opentype.parse(fontBuffer.buffer.slice(fontBuffer.byteOffset, fontBuffer.byteOffset + fontBuffer.byteLength));
-
-// Font metrics and typographic balance
-const fontSize = 140;
-const recAdvance = font.getAdvanceWidth('Rec', fontSize);
-const recoPath = font.getPath('Reco', 0, 0, fontSize);
-const bbox = recoPath.getBoundingBox();
-
-// Center mathematically in 512x512 canvas
-const originX = 256 - (bbox.x1 + bbox.x2) / 2;
-const originY = 256 - (bbox.y1 + bbox.y2) / 2;
-
-const recPath = font.getPath('Rec', originX, originY, fontSize);
-const oPath = font.getPath('o', originX + recAdvance, originY, fontSize);
-
-const dRec = recPath.toPathData(2);
-const dO = oPath.toPathData(2);
-
-// Dark squircle SVG
-const darkSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <linearGradient id="bgDark" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#2a141b" />
-      <stop offset="100%" stop-color="#1c0b11" />
+    <!-- Outer Rim Gradient -->
+    <radialGradient id="outerRimGrad" cx="45%" cy="30%" r="70%" fx="35%" fy="20%">
+      <stop offset="0%" stop-color="#ab1a3d" />
+      <stop offset="35%" stop-color="#800e28" />
+      <stop offset="70%" stop-color="#4e0618" />
+      <stop offset="100%" stop-color="#24020a" />
+    </radialGradient>
+
+    <!-- Elevated Disc Radial Gradient -->
+    <radialGradient id="elevatedDiscGrad" cx="42%" cy="28%" r="65%" fx="35%" fy="18%">
+      <stop offset="0%" stop-color="#981938" />
+      <stop offset="40%" stop-color="#6e0e24" />
+      <stop offset="80%" stop-color="#3d0513" />
+      <stop offset="100%" stop-color="#200108" />
+    </radialGradient>
+
+    <!-- Top Highlight Crescent -->
+    <linearGradient id="highlightGrad" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.35" />
+      <stop offset="40%" stop-color="#ff758f" stop-opacity="0.12" />
+      <stop offset="100%" stop-color="#ff758f" stop-opacity="0.0" />
     </linearGradient>
-    <filter id="shadowDark" x="-10%" y="-10%" width="125%" height="125%">
-      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.45" />
+
+    <!-- Subtle Inner Sphere Glow -->
+    <radialGradient id="centerGlow" cx="50%" cy="48%" r="50%">
+      <stop offset="0%" stop-color="#b82449" stop-opacity="0.32" />
+      <stop offset="75%" stop-color="#4d0617" stop-opacity="0.08" />
+      <stop offset="100%" stop-color="#180106" stop-opacity="0.0" />
+    </radialGradient>
+
+    <!-- Reco Text "o" Blush Gradient -->
+    <linearGradient id="oGrad" x1="20%" y1="0%" x2="90%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="55%" stop-color="#ffdee6" />
+      <stop offset="100%" stop-color="#ff9eb5" />
+    </linearGradient>
+
+    <!-- Deep Drop Shadow for Disc -->
+    <filter id="discShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="16" stdDeviation="18" flood-color="#000000" flood-opacity="0.65" />
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#120004" flood-opacity="0.45" />
+    </filter>
+
+    <!-- Text Shadow for 3D Pop -->
+    <filter id="textDropShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="5.5" flood-color="#000000" flood-opacity="0.75" />
+      <feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-color="#000000" flood-opacity="0.6" />
     </filter>
   </defs>
-  <rect width="512" height="512" rx="116" fill="url(#bgDark)" />
-  <circle cx="256" cy="256" r="160" fill="#ffb2bc" fill-opacity="0.04" />
-  <g filter="url(#shadowDark)">
-    <path d="${dRec}" fill="#FFE0E4" />
-    <path d="${dO}" fill="#FFB2BC" />
+
+  <!-- Outer Layer / Base Circle with deep bevel shadow -->
+  <circle cx="256" cy="256" r="236" fill="url(#outerRimGrad)" />
+  
+  <!-- Outer subtle top-left specular rim -->
+  <circle cx="256" cy="256" r="235" fill="none" stroke="url(#highlightGrad)" stroke-width="2.5" />
+
+  <!-- Inner Raised 3D Disc -->
+  <g filter="url(#discShadow)">
+    <circle cx="256" cy="252" r="202" fill="url(#elevatedDiscGrad)" />
+  </g>
+
+  <!-- Specular edge on raised disc -->
+  <circle cx="256" cy="252" r="201" fill="none" stroke="url(#highlightGrad)" stroke-width="2" />
+
+  <!-- Velvet Center Ambient Glow -->
+  <circle cx="256" cy="252" r="170" fill="url(#centerGlow)" />
+
+  <!-- Typography: Reco with styled 'o' -->
+  <g filter="url(#textDropShadow)">
+    <text
+      x="256"
+      y="262"
+      font-family="-apple-system, BlinkMacSystemFont, 'Plus Jakarta Sans', 'Inter', 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif"
+      font-size="146"
+      font-weight="900"
+      letter-spacing="-3"
+      text-anchor="middle"
+      dominant-baseline="central"
+    >
+      <tspan fill="#ffffff">Rec</tspan><tspan fill="url(#oGrad)">o</tspan>
+    </text>
   </g>
 </svg>`;
 
-// Light squircle SVG
-const lightSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <defs>
-    <linearGradient id="bgLight" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#FFFFFF" />
-      <stop offset="100%" stop-color="#FFF0F3" />
-    </linearGradient>
-    <filter id="shadowLight" x="-10%" y="-10%" width="125%" height="125%">
-      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#8c1d40" flood-opacity="0.15" />
-    </filter>
-  </defs>
-  <rect width="510" height="510" x="1" y="1" rx="116" fill="url(#bgLight)" stroke="#ffd9e0" stroke-width="2" />
-  <g filter="url(#shadowLight)">
-    <path d="${dRec}" fill="#26161B" />
-    <path d="${dO}" fill="#B32B43" />
-  </g>
-</svg>`;
+async function generateAllIcons() {
+  const publicDir = path.resolve('public');
+  const iconsDir = path.resolve('public/icons');
 
-// Maskable SVG (Full-bleed edge-to-edge for Android Adaptive Icons)
-const maskableSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <defs>
-    <linearGradient id="bgMaskable" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#2a141b" />
-      <stop offset="100%" stop-color="#1c0b11" />
-    </linearGradient>
-    <filter id="shadowM" x="-10%" y="-10%" width="125%" height="125%">
-      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.45" />
-    </filter>
-  </defs>
-  <rect width="512" height="512" fill="url(#bgMaskable)" />
-  <g filter="url(#shadowM)">
-    <path d="${dRec}" fill="#FFE0E4" />
-    <path d="${dO}" fill="#FFB2BC" />
-  </g>
-</svg>`;
+  if (!fs.existsSync(iconsDir)) {
+    fs.mkdirSync(iconsDir, { recursive: true });
+  }
 
-fs.writeFileSync('public/icon.svg', darkSvg);
-fs.writeFileSync('public/icons/icon-dark.svg', darkSvg);
-fs.writeFileSync('public/icons/icon-light.svg', lightSvg);
-fs.writeFileSync('public/icons/icon-maskable.svg', maskableSvg);
+  // Save the main SVG
+  fs.writeFileSync(path.join(publicDir, 'icon.svg'), svgContent, 'utf8');
+  console.log('Saved /public/icon.svg');
 
-async function generatePngs() {
-  const darkBuf = Buffer.from(darkSvg);
-  const lightBuf = Buffer.from(lightSvg);
-  const maskableBuf = Buffer.from(maskableSvg);
+  const svgBuffer = Buffer.from(svgContent);
 
-  // Dark icons
-  await sharp(darkBuf).resize(512, 512).png().toFile('public/icons/icon-dark-512.png');
-  await sharp(darkBuf).resize(192, 192).png().toFile('public/icons/icon-dark-192.png');
-  await sharp(darkBuf).resize(180, 180).png().toFile('public/icons/icon-dark-180.png');
-  await sharp(darkBuf).resize(32, 32).png().toFile('public/icons/icon-dark-32.png');
+  // Generate main root icons
+  await sharp(svgBuffer).resize(512, 512).png().toFile(path.join(publicDir, 'icon-512.png'));
+  console.log('Generated /public/icon-512.png');
 
-  // Light icons
-  await sharp(lightBuf).resize(512, 512).png().toFile('public/icons/icon-light-512.png');
-  await sharp(lightBuf).resize(192, 192).png().toFile('public/icons/icon-light-192.png');
-  await sharp(lightBuf).resize(180, 180).png().toFile('public/icons/icon-light-180.png');
-  await sharp(lightBuf).resize(32, 32).png().toFile('public/icons/icon-light-32.png');
+  await sharp(svgBuffer).resize(192, 192).png().toFile(path.join(publicDir, 'icon-192.png'));
+  console.log('Generated /public/icon-192.png');
 
-  // Standalone root icons (Maskable for launcher/splash)
-  await sharp(maskableBuf).resize(512, 512).png().toFile('public/icon-512.png');
-  await sharp(maskableBuf).resize(192, 192).png().toFile('public/icon-192.png');
+  await sharp(svgBuffer).resize(180, 180).png().toFile(path.join(publicDir, 'apple-touch-icon.png'));
+  console.log('Generated /public/apple-touch-icon.png');
 
-  // Apple Touch Icon & Favicon
-  await sharp(darkBuf).resize(180, 180).png().toFile('public/apple-touch-icon.png');
-  await sharp(darkBuf).resize(32, 32).png().toFile('public/favicon.png');
+  await sharp(svgBuffer).resize(32, 32).png().toFile(path.join(publicDir, 'favicon.png'));
+  console.log('Generated /public/favicon.png');
 
-  console.log('All icons generated and rasterized successfully.');
+  // Sub-icons in /public/icons
+  const sizes = [
+    { name: 'icon-dark-512.png', size: 512 },
+    { name: 'icon-light-512.png', size: 512 },
+    { name: 'icon-dark-192.png', size: 192 },
+    { name: 'icon-light-192.png', size: 192 },
+    { name: 'icon-dark-180.png', size: 180 },
+    { name: 'icon-light-180.png', size: 180 },
+    { name: 'icon-dark-32.png', size: 32 },
+    { name: 'icon-light-32.png', size: 32 },
+  ];
+
+  for (const item of sizes) {
+    await sharp(svgBuffer).resize(item.size, item.size).png().toFile(path.join(iconsDir, item.name));
+    console.log(`Generated /public/icons/${item.name}`);
+  }
+
+  console.log('All icons generated successfully!');
 }
 
-generatePngs().catch(console.error);
+generateAllIcons().catch((err) => {
+  console.error('Error generating icons:', err);
+  process.exit(1);
+});
